@@ -1,26 +1,292 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer utilities {
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    color: var(--text-primary) bg-transparent shadow-none;
+    -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
 
+:root {
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+
+  /* Tenant theme colors (overridden at runtime) */
+  --theme-primary: #2563eb;
+  --theme-accent: #7c3aed;
+  --theme-primary-light: rgba(37, 99, 235, 0.1);
+  --theme-accent-light: rgba(124, 58, 237, 0.1);
+
+  /* Text colors */
+  --text-primary: rgba(53, 63, 80, 1);
+  --text-secondary: rgba(95, 115, 140, 1);
+
+
+  /* Icon colors */
+  --icon-color: rgba(53, 63, 80, 1);
+
+  /* Surface/background colors */
+  --surface-primary: rgba(255, 255, 255, 1);
+  --surface-secondary: rgba(249, 251, 252, 1);
+  --surface-modal: rgba(255, 255, 255, 1);
+  --surface-white: rgba(255, 255, 255, 1);
+
+  /* Input colors */
+  --input-fill-enabled: var(--neutral-200);
+  --input-fill-disabled: rgba(225, 230, 237, 1);
+
+  /* Primary buttons */
+  --button-primary-fill-enabled: var(--active-blue-400);
+  --button-primary-fill-active: var(--active-blue-400);
+
+  /* Outline buttons */
+  --button-outline-stroke-enabled: var(--neutral-300);
+  --button-outline-stroke-disabled: var(--neutral-200);
+  --button-outline-stroke-active: var(--neutral-300);
+
+  /* Button labels */
+  --button-primary-label-all: rgba(255, 255, 255, 1);
+  --button-outline-label-enabled: var(--neutral-900);
+
+  /* Tertiary buttons */
+  --button-tertiary-fill-pressed: var(--active-blue-100);
+
+  /* Brand colors */
+  --interswitch-blue: rgba(0, 66, 95, 1);
+  --interswitch-red: rgba(238, 49, 42, 1);
+  --highlight: rgba(72, 176, 61, 1);
+
+  /* Neutral colors */
+  --neutral-100: rgba(255, 255, 255, 1);
+  --neutral-200: rgba(243, 245, 246, 1);
+  --neutral-300: rgba(225, 230, 237, 1);
+  --neutral-400: ;
+  --neutral-500: ;
+  --neutral-600: rgba(132, 143, 159, 1);
+  --neutral-700: rgba(95, 115, 140, 1);
+  --neutral-900: rgba(53, 63, 80, 1);
+
+  /* Active Blue colors */
+  --active-blue-100: rgba(235, 248, 254, 1);
+  --active-blue-200: ;
+  --active-blue-300: ;
+  --active-blue-400: rgba(2, 117, 216, 1);
+  --active-blue-500: rgba(26, 73, 131, 1);
+
+  /* Active Yellow colors */
+  --active-yellow-100: rgba(254, 246, 207, 1);
+  --active-yellow-200: rgba(253, 237, 148, 1);
+  --active-yellow-300: ;
+  --active-yellow-400: rgba(236, 155, 64, 1);
+  --active-yellow-500: rgba(175, 95, 38, 1);
+  --active-yellow-600: rgba(107, 43, 13, 1);
+
+  /* Active Red colors */
+  --active-red-100: rgba(251, 233, 233, 1);
+  --active-red-200: ;
+  --active-red-300: ;
+  --active-red-400: ;
+
+  /* Active Green colors */
+  --active-green-100: rgba(241, 254, 241, 1);
+  --active-green-200: rgba(190, 242, 185, 1);
+  --active-green-300: ;
+  --active-green-400: rgba(81, 158, 71, 1);
+  --active-green-500: rgba(54, 116, 61, 1);
+  --active-green-600: rgba(22, 60, 41, 1);
+
+  /* Primary Blue colors */
+  --primary-blue-100: rgba(235, 248, 254, 1);
+  --primary-blue-200: rgba(2, 117, 216, 1);
+  --primary-blue-300: ;
+  --primary-blue-400: rgba(71, 159, 200, 1);
+  --primary-blue-500: rgba(48, 115, 153, 1);
+  --primary-blue-600: rgba(24, 66, 93, 1);
+
+  /* Primary Red colors */
+  --primary-red-100: rgba(251, 233, 233, 1);
+  --primary-red-200: rgba(244, 183, 181, 1);
+  --primary-red-300: ;
+  --primary-red-400: rgba(220, 68, 55, 1);
+  --primary-red-500: rgba(164, 37, 26, 1);
+
+  /* Pop Blue */
+  --pop-blue: rgba(0, 184, 222, 1);
+
+  /* Selection colors */
+  --selection-color: ;
+  --skeleton-primary: rgba(230, 230, 230, 1);
+
+  .logo-container {
+    position: relative;
+  }
+
+  .dark-logo {
+    display: none;
+  }
+
+  .light-logo {
+    display: block;
+  }
+}
+
+.dark {
+    /* Text colors */
+    --text-primary: rgba(253, 253, 253, 1);
+    --text-secondary: rgba(227, 227, 228, 1);
+
+    /* Icon colors */
+    --icon-color: var(--text-primary);
+
+    /* Surface/background colors */
+    --surface-primary: rgba(31, 33, 38, 1);
+    --surface-secondary: rgba(42, 44, 49, 1);
+    --surface-modal: rgba(42, 48, 54, 1);
+    --surface-white: rgba(0, 0, 0, 1);
+
+    /* Input colors */
+    --input-fill-enabled: rgba(67, 68, 73, 1);
+    --input-fill-disabled: rgba(56, 57, 62, 1);
+
+    /* Primary buttons */
+    --button-primary-fill-enabled: rgba(174, 221, 241, 1);
+    --button-primary-fill-active: rgba(174, 221, 241, 1);
+
+    /* Outline buttons */
+    --button-outline-stroke-enabled: rgba(51, 53, 58, 1);
+    --button-outline-stroke-active: rgba(51, 53, 58, 1);
+
+    /* Button labels */
+    --button-primary-label-all: rgba(31, 33, 38, 1);
+    --button-outline-label-enabled: rgba(174, 221, 241, 1);
+
+    /* Tertiary buttons */
+    --button-tertiary-fill-pressed: rgba(67, 68, 73, 1);
+
+    /* Brand colors */
+    --interswitch-blue: rgba(0, 66, 95, 1);
+    --interswitch-red: rgba(238, 49, 42, 1);
+    --highlight: rgba(72, 176, 61, 1);
+
+    /* Neutral colors */
+    --neutral-100: rgba(255, 255, 255, 1);
+    --neutral-200: rgba(243, 245, 246, 1);
+    --neutral-300: rgba(225, 230, 237, 1);
+    --neutral-400: ;
+    --neutral-500: ;
+    --neutral-600: rgba(132, 143, 159, 1);
+    --neutral-700: rgba(95, 115, 140, 1);
+    --neutral-900: rgba(53, 63, 80, 1);
+
+    /* Active Blue colors */
+    --active-blue-100: rgba(235, 248, 254, 1);
+    --active-blue-200: ;
+    --active-blue-300: ;
+    --active-blue-400: rgba(2, 117, 216, 1);
+    --active-blue-500: rgba(26, 73, 131, 1);
+
+    /* Active Yellow colors */
+    --active-yellow-100: rgba(254, 246, 207, 1);
+    --active-yellow-200: rgba(253, 237, 148, 1);
+    --active-yellow-300: ;
+    --active-yellow-400: rgba(236, 155, 64, 1);
+    --active-yellow-500: rgba(175, 95, 38, 1);
+    --active-yellow-600: rgba(107, 43, 13, 1);
+
+    /* Active Red colors */
+    --active-red-100: rgba(251, 233, 233, 1);
+    --active-red-200: ;
+    --active-red-300: ;
+    --active-red-400: ;
+
+    /* Active Green colors */
+    --active-green-100: rgba(241, 254, 241, 1);
+    --active-green-200: rgba(190, 242, 185, 1);
+    --active-green-300: ;
+    --active-green-400: rgba(81, 158, 71, 1);
+    --active-green-500: rgba(54, 116, 61, 1);
+    --active-green-600: rgba(22, 60, 41, 1);
+
+    /* Primary Blue colors */
+    --primary-blue-100: rgba(235, 248, 254, 1);
+    --primary-blue-200: rgba(174, 221, 241, 1);
+    --primary-blue-300: ;
+    --primary-blue-400: rgba(71, 159, 200, 1);
+    --primary-blue-500: rgba(48, 115, 153, 1);
+    --primary-blue-600: rgba(24, 66, 93, 1);
+
+    /* Primary Red colors */
+    --primary-red-100: rgba(251, 233, 233, 1);
+    --primary-red-200: rgba(244, 183, 181, 1);
+    --primary-red-300: ;
+    --primary-red-400: rgba(220, 68, 55, 1);
+    --primary-red-500: rgba(164, 37, 26, 1);
+
+    /* Pop Blue */
+    --pop-blue: rgba(0, 184, 222, 1);
+
+    /* Selection colors */
+    --selection-color: ;
+    --skeleton-primary: rgba(0, 0, 0, 1);
+
+    .dark-logo {
+      display: block;
+    }
+
+    .light-logo {
+      display: none;
+    }
+}
+
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-feature-settings:
+    'liga' off,
+    'clig' off;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-600);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(31, 33, 38, 1);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(51, 53, 58, 1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(67, 68, 73, 1);
 }
