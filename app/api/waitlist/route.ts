@@ -6,13 +6,13 @@ interface WaitlistPayload {
   name:              string;
   email:             string;
   role:              string;
-  scammed:           string;
+  phoneNumber:       string;
   itemName:          string;
   transactionAmount: string;
 }
 
 const REQUIRED: (keyof WaitlistPayload)[] = [
-  "name", "email", "role", "scammed", "itemName",
+  "name", "email", "role", "phoneNumber", "itemName",
 ];
 
 export async function POST(req: Request) {
@@ -52,9 +52,10 @@ export async function POST(req: Request) {
         name:              body.name!.trim(),
         email:             body.email!.trim(),
         role:              body.role,
-        scammed:           body.scammed,
+        scammed:           "",
         itemName:          body.itemName!.trim(),
         transactionAmount: body.transactionAmount ?? "",
+        phoneNumber:       body.phoneNumber,
       }),
       redirect: "follow",
     });

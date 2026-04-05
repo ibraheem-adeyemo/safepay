@@ -76,9 +76,9 @@ async function submitToGoogleForms(tx: TxForm, wl: WlForm): Promise<void> {
       name:              wl.name.trim(),
       email:             wl.email.trim(),
       role:              tx.role,
-      scammed:           wl.scammed,
       itemName:          tx.itemName.trim(),
-      transactionAmount: wl.transactionAmount || "",
+      transactionAmount: tx.dealAmount.trim(),
+      phoneNumber:       wl.phoneNumber.trim(),
     }),
   });
   const data = await res.json().catch(() => ({}));
@@ -91,15 +91,15 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
   const [step, setStep] = useState<ModalStep>("tx");
   const [tx, setTx] = useState<TxForm>({ itemName: "", dealAmount: "", role: "" });
   const [txErr, setTxErr] = useState<TxErrors>({});
-  const [wl, setWl] = useState<WlForm>({ name: "", email: "", scammed: "", transactionAmount: "" });
-  const [wlErr, setWlErr] = useState<WlErrors>({});
+  const [wl, setWl] = useState<WlForm>({ name: "", email: "", phoneNumber: "" });
+  const [wlErr, setWlErr] = useState<WlErrors | null>(null);
   const [submitError, setSubmitError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
  
   useEffect(() => {
     if (isOpen) {
       setStep("tx"); setTx({ itemName: "", dealAmount: "", role: "" }); setTxErr({});
-      setWl({ name: "", email: "", scammed: "", transactionAmount: "" }); setWlErr({});
+      setWl({ name: "", email: "", phoneNumber: "" }); setWlErr(null);
       setSubmitError(""); setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [isOpen]);
@@ -121,8 +121,9 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
     const e: WlErrors = {};
     if (!wl.name.trim())  e.name  = "We need your name to save your spot";
     if (!wl.email.trim()) e.email = "Email required to confirm your slot";
+    if (!wl.phoneNumber.trim()) e.phoneNumber = "Phone number required";
     else if (!/\S+@\S+\.\S+/.test(wl.email)) e.email = "Please enter a valid email";
-    if (!wl.scammed) e.scammed = "Quick one — this helps us understand the problem";
+    if (!wl.phoneNumber) e.phoneNumber = "Quick one — this helps us to get in touch with you";
     setWlErr(e); return Object.keys(e).length === 0;
   };
  
@@ -294,21 +295,31 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
                   <label className="block text-sm font-semibold text-stone-700 mb-1.5">Your first name</label>
                   <input type="text" placeholder="e.g. Tunde"
                     value={wl.name}
-                    onChange={(e) => { setWl({ ...wl, name: e.target.value }); if (wlErr.name) setWlErr({ ...wlErr, name: undefined }); }}
-                    className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${wlErr.name ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
+                    onChange={(e) => { setWl({ ...wl, name: e.target.value }); if (wlErr?.name) setWlErr({ ...wlErr, name: undefined }); }}
+                    className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${wlErr?.name ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
                   />
-                  {wlErr.name && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr.name}</p>}
+                  {wlErr?.name && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr?.name}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-stone-700 mb-1.5">Email address</label>
                   <input type="email" placeholder="you@email.com"
                     value={wl.email}
-                    onChange={(e) => { setWl({ ...wl, email: e.target.value }); if (wlErr.email) setWlErr({ ...wlErr, email: undefined }); }}
-                    className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${wlErr.email ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
+                    onChange={(e) => { setWl({ ...wl, email: e.target.value }); if (wlErr?.email) setWlErr({ ...wlErr, email: undefined }); }}
+                    className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${wlErr?.email ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
                   />
-                  {wlErr.email && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr.email}</p>}
+                  {wlErr?.email && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr.email}</p>}
                 </div>
+
                 <div>
+                  <label className="block text-sm font-semibold text-stone-700 mb-1.5">Phone number</label>
+                  <input type="tel" placeholder="+2347012345678"
+                    value={wl.phoneNumber}
+                    onChange={(e) => { setWl({ ...wl, phoneNumber: e.target.value }); if (wlErr?.phoneNumber) setWlErr({ ...wlErr, phoneNumber: undefined }); }}
+                    className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${wlErr?.phoneNumber ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
+                  />
+                  {wlErr?.phoneNumber && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr.phoneNumber}</p>}
+                </div>
+                {/* <div>
                   <label className="block text-sm font-semibold text-stone-700 mb-1">Have you been scammed online before?</label>
                   <p className="text-xs text-stone-400 mb-2">No judgement — helps us understand how big this problem is.</p>
                   <div className="grid grid-cols-2 gap-3">
@@ -316,8 +327,8 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
                     <Chip selected={wl.scammed === "No"}  onClick={() => { setWl({ ...wl, scammed: "No" });  setWlErr({ ...wlErr, scammed: undefined }); }} color="green">🙏 Not yet</Chip>
                   </div>
                   {wlErr.scammed && <p className="text-red-500 text-xs mt-1.5">⚠ {wlErr.scammed}</p>}
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                   <label className="block text-sm font-semibold text-stone-700 mb-1">
                     Typical deal size? <span className="text-stone-400 font-normal">(optional)</span>
                   </label>
@@ -329,7 +340,7 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
                       >{r.label}</button>
                     ))}
                   </div>
-                </div>
+                </div> */}
               </div>
               <button onClick={handleWlSubmit} className="mt-6 w-full bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-4 rounded-xl transition-all text-base shadow-lg shadow-emerald-100">
                 Complete My Signup →
