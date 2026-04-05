@@ -185,7 +185,7 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
               <div className="space-y-4">
                 {/* Item */}
                 <div>
-                  <label className="block text-sm font-semibold text-stone-700 mb-1.5">What are you transacting?</label>
+                  <label className="block text-sm font-semibold text-stone-700 mb-1.5">What are you buying or selling?</label>
                   <input ref={inputRef} type="text" placeholder="e.g. iPhone 15, Ankara fabric, Logo design…"
                     value={tx.itemName}
                     onChange={(e) => { setTx({ ...tx, itemName: e.target.value }); if (txErr.itemName) setTxErr({ ...txErr, itemName: undefined }); }}
@@ -204,6 +204,7 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
                       className={`w-full pl-8 pr-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${txErr.dealAmount ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"}`}
                     />
                   </div>
+                  <p className="text-xs mt-1.5">🔒 Your money is held securely until both parties confirm</p>
                   {txErr.dealAmount && <p className="text-red-500 text-xs mt-1.5">⚠ {txErr.dealAmount}</p>}
                 </div>
                 {/* Role */}

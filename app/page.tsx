@@ -63,7 +63,7 @@ export default function LandingPage() {
                 Buy and Sell Online{" "}<span className="text-amber-400">Without the Fear</span>{" "}of Getting Scammed
               </h1>
               <p className="text-lg sm:text-xl text-emerald-200 leading-relaxed mb-10 max-w-2xl">
-                SafePay holds the buyer's money in a protected escrow until the seller delivers. No more praying after you pay. No more delivering on a promise that vanishes.
+                SafePay holds the buyer's money in a protected escrow until the seller delivers.<br /> If the seller disappears, you get your money back. <br /> No more delivering on a promise that vanishes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <button onClick={open} className="bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white font-bold px-8 py-4 rounded-xl text-lg transition-all shadow-xl shadow-amber-900/30">
@@ -103,7 +103,14 @@ export default function LandingPage() {
                 <div key={c.persona} className="bg-white rounded-2xl p-8 border border-stone-200 shadow-sm">
                   <div className="text-4xl mb-4">{c.emoji}</div>
                   <h3 className="text-xl font-bold text-stone-800 mb-4">{c.persona}</h3>
-                  <p className="text-stone-600 leading-relaxed mb-6 text-base italic border-l-4 border-red-200 pl-4">"{c.story}"</p>
+                  <p className="text-stone-600 leading-relaxed mb-6 text-base italic border-l-4 border-red-200 pl-4">{
+                    c.story.map((itm, i) => (
+                      <div key={i} className="flex">
+                        <div className="w-10 h-10 border-r-[50%]"></div>
+                        <div>{itm}</div>
+                      </div>
+                    ))
+                    }</p>
                   <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                     <span className="text-red-700 font-bold text-lg">{c.stat}</span>{" "}<span className="text-red-600 text-sm">{c.statLabel}</span>
                   </div>

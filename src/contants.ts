@@ -25,8 +25,8 @@ export const TRUST_STATS = [
 ];
  
 export const PAIN_CARDS = [
-  { emoji: "😰", persona: "The Buyer's Fear",     story: "You find a great deal on Instagram. The seller seems legit. You pay ₦85,000. They send a tracking number. You wait… and wait. Then — nothing. They've blocked you.",               stat: "1 in 3 online buyers",  statLabel: "has been scammed or knows someone who has" },
-  { emoji: "😤", persona: "The Seller's Nightmare", story: "A buyer messages you on WhatsApp. You ship the product. You share the waybill as proof. Then the buyer says they'll 'pay later' — and ghosts you completely.", stat: "68% of sellers",        statLabel: "refuse bank transfers from strangers because of this exact fear" },
+  { emoji: "😰", persona: "The Buyer's Fear",     story: [ "You pay → seller blocks you", "No delivery", "No way to recover money"],              stat: "1 in 3 online buyers",  statLabel: "has been scammed or knows someone who has" },
+  { emoji: "😤", persona: "The Seller's Nightmare", story: [ "Buyer receives item → refuses to pay", "Fake payment alerts", "Chargebacks"], stat: "68% of sellers",        statLabel: "refuse bank transfers from strangers because of this exact fear" },
 ];
  
 export const TRUST_POINTS = [
