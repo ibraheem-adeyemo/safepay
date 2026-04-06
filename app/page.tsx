@@ -3,6 +3,7 @@
 import { HOW_IT_WORKS, PAIN_CARDS, TRUST_POINTS, TRUST_STATS, WEEK_SLOTS, WEEK_TAKEN } from "@/src/contants";
 import { CountdownTimer } from "@/src/features/components/CountdownTimer";
 import { ProgressBar } from "@/src/features/components/ProgressBar";
+import WhatsappBtn from "@/src/features/components/WhatsappBtn";
 import { TransactionModal } from "@/src/features/modals/transactionModsal";
 import { useEffect, useState } from "react";
 
@@ -15,6 +16,14 @@ export default function LandingPage() {
   }, []);
   const open = () => setModalOpen(true);
  
+  const buyerMessage = "Hi, I want to BUY something using SafePay"
+
+  const sellerMessage = "Hi, I want to SELL something using SafePay"
+
+  const generalMessage = "Hi, I want to use SafePay for a transaction"
+
+  const whatsAppNumber = "+2347013331995"
+
   return (
     <>
       {/* <style>{`
@@ -89,7 +98,12 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
- 
+
+        <WhatsappBtn phoneNumber={whatsAppNumber} preMessage={encodeURIComponent(generalMessage)} chatBtnCont={generalMessage} />
+
+        <WhatsappBtn phoneNumber={whatsAppNumber} preMessage={encodeURIComponent(buyerMessage)} chatBtnCont={buyerMessage} bottomPosition={"bottom-20"} />     
+        <WhatsappBtn phoneNumber={whatsAppNumber} preMessage={encodeURIComponent(sellerMessage)} chatBtnCont={sellerMessage} bottomPosition={"bottom-35"} />
+
         {/* ════════ PROBLEM ════════ */}
         <section className="py-20 sm:py-28 bg-stone-100">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
