@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AccountType {
+  PERSONAL
+  BUSINESS
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+// The channel through which a user or transaction originated
+enum Channel {
+  WEB
+  API
+  WIDGET
+  WEBVIEW
+}
+
+enum TransactionStatus {
+  CREATED
+  AWAITING_PAYMENT
+  FUNDED
+  IN_PROGRESS
+  DELIVERED
+  UNDER_INSPECTION
+  COMPLETED
+  DISPUTED
+  REFUNDED
+  CANCELLED
+}
+
+enum PartyRole {
+  BUYER
+  SELLER
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum FeeType {
+  PERCENTAGE
+  FIXED
+  FREE
+}
+
+enum NotificationType {
+  TRANSACTION_CREATED
+  TRANSACTION_FUNDED
+  TRANSACTION_DELIVERED
+  TRANSACTION_COMPLETED
+  TRANSACTION_DISPUTED
+  TRANSACTION_CANCELLED
+  PAYMENT_CONFIRMED
+  DISPUTE_RAISED
+  DISPUTE_RESOLVED
+  ACCOUNT_CLAIMED
+}
+
+// ─── User & Identity ──────────────────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  email        String?       @unique
+  phone        String?       @unique
+  name         String
+  passwordHash String?
+
+  emailVerified Boolean @default(false)
+  phoneVerified Boolean @default(false)
+
+  accountType   AccountType   @default(PERSONAL)
+  accountStatus AccountStatus @default(ACTIVE)
+
+  // Shadow account: false means the account was auto-created by the system
+  // (external API/widget initiator). User must claim it via claimToken.
+  isClaimed     Boolean   @default(true)
+  claimToken    String?   @unique
+  claimTokenExp DateTime?
+
+  // Origin tracing — populated for external channel accounts
+  channel        Channel @default(WEB)
+  platformUrl    String?
+  platformUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business      Business?
+  transactions  TransactionParty[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  apiKeys       ApiKey[]
+}
+
+// ─── Business Profile ─────────────────────────────────────────────────────────
+
+model Business {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  name        String
+  description String?
+  website     String?
+  logoUrl     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feeConfig FeeConfig?
+  webhooks  Webhook[]
+}
+
+// ─── API Keys ─────────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id     String  @id @default(cuid())
+  userId String
+  // First 12 chars of the key shown in UI (e.g. "sp_live_xxxx")
+  prefix String
+  // Full key stored as bcrypt hash — never stored in plaintext
+  keyHash    String   @unique
+  label      String?
+  isActive   Boolean  @default(true)
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Escrow Transactions ──────────────────────────────────────────────────────
+
+model Transaction {
+  id          String            @id @default(cuid())
+  // Short human-readable reference, e.g. "SPY-2026-00042"
+  reference   String            @unique
+  title       String
+  description String?
+  amount      Decimal           @db.Decimal(15, 2)
+  currency    String            @default("NGN")
+  status      TransactionStatus @default(CREATED)
+  channel     Channel           @default(WEB)
+
+  // Fee snapshot at the time of transaction creation
+  feeType   FeeType?
+  feeValue  Decimal? @db.Decimal(10, 4)
+  feeAmount Decimal? @db.Decimal(15, 2)
+
+  adminNote String?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parties       TransactionParty[]
+  statusLogs    TransactionStatusLog[]
+  payments      Payment[]
+  disputes      Dispute[]
+  notifications Notification[]
+}
+
+model TransactionParty {
+  id            String    @id @default(cuid())
+  transactionId String
+  userId        String
+  role          PartyRole
+  // True for the user who created this transaction
+  isInitiator   Boolean   @default(false)
+  accepted      Boolean   @default(false)
+  acceptedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@unique([transactionId, userId, role])
+}
+
+model TransactionStatusLog {
+  id            String             @id @default(cuid())
+  transactionId String
+  fromStatus    TransactionStatus?
+  toStatus      TransactionStatus
+  note          String?
+  actorId       String?
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Payments (manual tracking) ───────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  transactionId String
+  amount        Decimal       @db.Decimal(15, 2)
+  // Bank transfer reference or any manual payment identifier
+  reference     String?
+  paymentMethod String?
+  status        PaymentStatus @default(PENDING)
+  confirmedAt   DateTime?
+  // Admin user ID who confirmed the payment
+  confirmedById String?
+  note          String?
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Disputes ─────────────────────────────────────────────────────────────────
+
+model Dispute {
+  id            String        @id @default(cuid())
+  transactionId String
+  raisedById    String
+  reason        String
+  description   String?
+  status        DisputeStatus @default(OPEN)
+  resolution    String?
+  resolvedAt    DateTime?
+  resolvedById  String?
+
+  createdAt DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+// ─── Fee Management ───────────────────────────────────────────────────────────
+
+model FeeConfig {
+  id         String    @id @default(cuid())
+  // null = global platform default; set = business-specific override
+  businessId String?   @unique
+  feeType    FeeType   @default(PERCENTAGE)
+  // For PERCENTAGE: value like 1.5 means 1.5%. For FIXED: value in kobo/naira.
+  feeValue   Decimal   @db.Decimal(10, 4)
+  // Override to make this business completely free
+  isFree     Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+// ─── Webhooks ─────────────────────────────────────────────────────────────────
+
+model Webhook {
+  id         String   @id @default(cuid())
+  businessId String
+  url        String
+  // e.g. ["transaction.funded", "transaction.completed"]
+  events     String[]
+  // HMAC secret for verifying webhook payloads on the receiver's end
+  secret     String
+  isActive   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String
+  transactionId String?
+  type          NotificationType
+  title         String
+  body          String
+  isRead        Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String  @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  ipAddress  String?
+
+  createdAt DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+}
