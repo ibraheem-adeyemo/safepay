@@ -6,6 +6,7 @@ import { hash, compare } from "bcryptjs";
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
+import { notifyUser } from "@/lib/notifications";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string; success?: boolean } | undefined;
 
@@ -49,6 +50,13 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
     accountType: user.accountType,
     name: user.name,
   });
+
+  await notifyUser(
+    session!.userId,
+    "ACCOUNT_CLAIMED",
+    "Account secured",
+    "Your SafePay account is now fully set up. Welcome to SafePay!"
+  );
 
   redirect("/dashboard?claimed=1");
 }

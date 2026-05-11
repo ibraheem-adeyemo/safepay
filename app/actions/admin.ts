@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import type { TransactionStatus } from "@prisma/client";
+import { notifyParties } from "@/lib/notifications";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -51,6 +51,13 @@ export async function adminConfirmPayment(txnId: string, formData: FormData): Pr
     },
   });
 
+  await notifyParties(
+    txnId,
+    "PAYMENT_CONFIRMED",
+    "Payment confirmed — escrow funded",
+    `Payment for "${transaction!.title}" has been confirmed. The escrow is now funded.`
+  );
+
   redirect(`/admin/transactions/${txnId}`);
 }
 
@@ -60,9 +67,7 @@ export async function adminMarkRefunded(txnId: string, formData: FormData): Prom
   const session = await requireAdmin();
   const note = (formData.get("note") as string)?.trim() || "Refunded by admin";
 
-  const refundable: TransactionStatus[] = [
-    "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "DISPUTED",
-  ];
+  const refundable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "DISPUTED"];
   const transaction = await db.transaction.findUnique({ where: { id: txnId } });
   if (!transaction || !refundable.includes(transaction.status)) {
     redirect(`/admin/transactions/${txnId}?error=wrong_status`);
@@ -93,7 +98,7 @@ export async function adminCancelTransaction(txnId: string, formData: FormData):
   const session = await requireAdmin();
   const note = (formData.get("note") as string)?.trim() || "Cancelled by admin";
 
-  const cancellable: TransactionStatus[] = ["CREATED", "AWAITING_PAYMENT"];
+  const cancellable = ["CREATED", "AWAITING_PAYMENT"];
   const transaction = await db.transaction.findUnique({ where: { id: txnId } });
   if (!transaction || !cancellable.includes(transaction.status)) {
     redirect(`/admin/transactions/${txnId}?error=wrong_status`);
@@ -159,18 +164,25 @@ export async function adminResolveDispute(txnId: string, formData: FormData): Pr
   await db.transaction.update({
     where: { id: txnId },
     data: {
-      status: outcome as TransactionStatus,
+      status: outcome as "COMPLETED" | "REFUNDED",
       adminNote: resolution,
       statusLogs: {
         create: {
           fromStatus: "DISPUTED",
-          toStatus: outcome as TransactionStatus,
+          toStatus: outcome as "COMPLETED" | "REFUNDED",
           actorId: session.userId,
           note: `Dispute resolved: ${resolution}`,
         },
       },
     },
   });
+
+  await notifyParties(
+    txnId,
+    "DISPUTE_RESOLVED",
+    "Dispute resolved",
+    `The dispute on "${transaction!.title}" has been resolved.`
+  );
 
   redirect(`/admin/transactions/${txnId}`);
 }

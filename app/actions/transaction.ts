@@ -6,14 +6,13 @@ import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
 import {
   generateReference,
-  generateInviteToken,
   verifyInviteToken,
   calculateFee,
-  getCounterpartyRole,
 } from "@/lib/transaction/helpers";
-import type { PartyRole, TransactionStatus } from "@prisma/client";
+import { notifyUser, notifyParties } from "@/lib/notifications";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
+type Party = { role: string; userId: string; isInitiator: boolean };
 
 // ─── Create Transaction ───────────────────────────────────────────────────────
 
@@ -43,7 +42,7 @@ export async function createTransaction(
 
   const validated = CreateSchema.safeParse(raw);
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors };
+    return { errors: z.flattenError(validated.error).fieldErrors };
   }
 
   const { title, description, amount, role } = validated.data;
@@ -65,7 +64,7 @@ export async function createTransaction(
       parties: {
         create: {
           userId: session.userId,
-          role: role as PartyRole,
+          role: role as "BUYER" | "SELLER",
           isInitiator: true,
           accepted: true,
           acceptedAt: new Date(),
@@ -80,6 +79,14 @@ export async function createTransaction(
       },
     },
   });
+
+  await notifyUser(
+    session.userId,
+    "TRANSACTION_CREATED",
+    "Transaction created",
+    `Your escrow for "${title}" is ready. Share the invite link with the other party.`,
+    transaction.id
+  );
 
   redirect(`/dashboard/transactions/${transaction.id}`);
 }
@@ -117,7 +124,7 @@ export async function acceptTransactionAsGuest(
     return { message: "This transaction is no longer open for acceptance." };
   }
 
-  const slotTaken = transaction.parties.some((p) => p.role === tokenData.role);
+  const slotTaken = transaction.parties.some((p: Party) => p.role === tokenData.role);
   if (slotTaken) return { message: "This transaction has already been accepted." };
 
   const raw = {
@@ -126,7 +133,7 @@ export async function acceptTransactionAsGuest(
     phone: (formData.get("phone") as string) || undefined,
   };
   const validated = AcceptSchema.safeParse(raw);
-  if (!validated.success) return { errors: validated.error.flatten().fieldErrors };
+  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
 
   const { name, email, phone } = validated.data;
 
@@ -185,6 +192,26 @@ export async function acceptTransactionAsGuest(
     },
   });
 
+  // Notify the initiator that their counterparty joined
+  const initiator = transaction.parties.find((p: Party) => p.isInitiator);
+  if (initiator) {
+    await notifyUser(
+      initiator.userId,
+      "TRANSACTION_CREATED",
+      "Your counterparty has joined",
+      `${name} joined "${transaction.title}" as the ${tokenData.role.toLowerCase()}. The escrow is now active.`,
+      txnId
+    );
+  }
+  // Notify the new joiner
+  await notifyUser(
+    counterparty.id,
+    "TRANSACTION_CREATED",
+    "You've joined a transaction",
+    `You've joined "${transaction.title}" as the ${tokenData.role.toLowerCase()}.`,
+    txnId
+  );
+
   // Give the counterparty a session — they're now "logged in" with a shadow account.
   // A banner on the transaction page will prompt them to set a password.
   await createSession({
@@ -215,18 +242,21 @@ export async function acceptTransactionAsLoggedIn(
 
   if (!transaction || transaction.status !== "CREATED") redirect(`/t/${txnId}`);
 
-  const slotTaken = transaction.parties.some((p) => p.role === tokenData.role);
+  // tokenData and transaction are non-null past this point (redirect throws above)
+  const td = tokenData!;
+  const txn = transaction!;
+
+  const slotTaken = txn.parties.some((p: Party) => p.role === td.role);
   if (slotTaken) redirect(`/t/${txnId}`);
 
-  // Prevent the initiator from also filling the counterparty slot
-  const isInitiator = transaction.parties.some((p) => p.userId === session.userId);
+  const isInitiator = txn.parties.some((p: Party) => p.userId === session!.userId);
   if (isInitiator) redirect(`/t/${txnId}?error=already_party`);
 
   await db.transactionParty.create({
     data: {
       transactionId: txnId,
-      userId: session.userId,
-      role: tokenData.role,
+      userId: session!.userId,
+      role: td.role,
       isInitiator: false,
       accepted: true,
       acceptedAt: new Date(),
@@ -241,18 +271,28 @@ export async function acceptTransactionAsLoggedIn(
         create: {
           fromStatus: "CREATED",
           toStatus: "AWAITING_PAYMENT",
-          actorId: session.userId,
-          note: `${tokenData.role} joined the transaction`,
+          actorId: session!.userId,
+          note: `${td.role} joined the transaction`,
         },
       },
     },
   });
 
+  const initiator = txn.parties.find((p: Party) => p.isInitiator);
+  if (initiator) {
+    await notifyUser(
+      initiator.userId,
+      "TRANSACTION_CREATED",
+      "Your counterparty has joined",
+      `${session!.name} joined "${txn.title}" as the ${td.role.toLowerCase()}. The escrow is now active.`,
+      txnId
+    );
+  }
+
   redirect(`/t/${txnId}?joined=1`);
 }
 
 // ─── Cancel Transaction ───────────────────────────────────────────────────────
-// Used directly as a form action (returns void — errors redirect with query param)
 
 export async function cancelTransaction(txnId: string): Promise<void> {
   const session = await getSession();
@@ -267,7 +307,7 @@ export async function cancelTransaction(txnId: string): Promise<void> {
     redirect(`/dashboard/transactions/${txnId}?error=not_found`);
   }
 
-  const cancellableStatuses: TransactionStatus[] = ["CREATED", "AWAITING_PAYMENT"];
+  const cancellableStatuses = ["CREATED", "AWAITING_PAYMENT"];
   if (!cancellableStatuses.includes(transaction.status)) {
     redirect(`/dashboard/transactions/${txnId}?error=cannot_cancel`);
   }
@@ -286,6 +326,13 @@ export async function cancelTransaction(txnId: string): Promise<void> {
       },
     },
   });
+
+  await notifyParties(
+    txnId,
+    "TRANSACTION_CANCELLED",
+    "Transaction cancelled",
+    `"${transaction.title}" has been cancelled.`
+  );
 
   redirect("/dashboard/transactions");
 }
@@ -310,7 +357,7 @@ export async function markAsDelivered(txnId: string): Promise<void> {
     redirect(`/dashboard/transactions/${txnId}?error=wrong_role`);
   }
 
-  const allowedStatuses: TransactionStatus[] = ["FUNDED", "IN_PROGRESS"];
+  const allowedStatuses = ["FUNDED", "IN_PROGRESS"];
   if (!allowedStatuses.includes(transaction.status)) {
     redirect(`/dashboard/transactions/${txnId}?error=wrong_status`);
   }
@@ -329,6 +376,15 @@ export async function markAsDelivered(txnId: string): Promise<void> {
       },
     },
   });
+
+  // Notify the buyer (all parties except seller)
+  await notifyParties(
+    txnId,
+    "TRANSACTION_DELIVERED",
+    "Item marked as delivered",
+    `The seller has marked "${transaction.title}" as delivered. Please review and confirm receipt.`,
+    session.userId
+  );
 
   redirect(`/dashboard/transactions/${txnId}`);
 }
@@ -353,7 +409,7 @@ export async function confirmReceipt(txnId: string): Promise<void> {
     redirect(`/dashboard/transactions/${txnId}?error=wrong_role`);
   }
 
-  const allowedStatuses: TransactionStatus[] = ["DELIVERED", "UNDER_INSPECTION"];
+  const allowedStatuses = ["DELIVERED", "UNDER_INSPECTION"];
   if (!allowedStatuses.includes(transaction.status)) {
     redirect(`/dashboard/transactions/${txnId}?error=wrong_status`);
   }
@@ -373,6 +429,15 @@ export async function confirmReceipt(txnId: string): Promise<void> {
     },
   });
 
+  // Notify the seller (all parties except buyer)
+  await notifyParties(
+    txnId,
+    "TRANSACTION_COMPLETED",
+    "Transaction completed",
+    `The buyer confirmed receipt of "${transaction.title}". Payment will be released to you.`,
+    session.userId
+  );
+
   redirect(`/dashboard/transactions/${txnId}`);
 }
 
@@ -391,12 +456,7 @@ export async function raiseDispute(
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const disputeable: TransactionStatus[] = [
-    "FUNDED",
-    "IN_PROGRESS",
-    "DELIVERED",
-    "UNDER_INSPECTION",
-  ];
+  const disputeable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"];
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },
@@ -443,6 +503,13 @@ export async function raiseDispute(
       },
     },
   });
+
+  await notifyParties(
+    txnId,
+    "DISPUTE_RAISED",
+    "Dispute raised",
+    `A dispute has been raised on "${transaction.title}". Our team will review and reach out to both parties.`
+  );
 
   redirect(`/dashboard/transactions/${txnId}`);
 }
