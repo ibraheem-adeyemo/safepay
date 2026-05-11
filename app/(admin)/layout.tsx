@@ -15,33 +15,33 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-stone-900 flex flex-col">
+    <div className="min-h-screen bg-stone-50 flex flex-col">
       {/* Admin top bar */}
-      <header className="bg-stone-950 border-b border-stone-800 sticky top-0 z-40">
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-black text-white tracking-tight">
-              Safe<span className="text-amber-400">Pay</span>
+            <span className="text-lg font-black text-emerald-800 tracking-tight">
+              Safe<span className="text-amber-500">Pay</span>
             </span>
             <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               ADMIN
             </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-stone-400">
-            <a href="/admin" className="hover:text-white transition-colors">
+          <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-stone-500">
+            <a href="/admin" className="hover:text-stone-900 transition-colors">
               Overview
             </a>
-            <a href="/admin/transactions" className="hover:text-white transition-colors">
+            <a href="/admin/transactions" className="hover:text-stone-900 transition-colors">
               Transactions
             </a>
-            <a href="/admin/users" className="hover:text-white transition-colors">
+            <a href="/admin/users" className="hover:text-stone-900 transition-colors">
               Users
             </a>
-            <a href="/admin/disputes" className="hover:text-white transition-colors">
+            <a href="/admin/disputes" className="hover:text-stone-900 transition-colors">
               Disputes
             </a>
-            <a href="/admin/fees" className="hover:text-white transition-colors">
+            <a href="/admin/fees" className="hover:text-stone-900 transition-colors">
               Fee Config
             </a>
           </nav>
@@ -53,7 +53,7 @@ export default async function AdminLayout({
             <form action={logout}>
               <button
                 type="submit"
-                className="text-xs text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 px-3 py-1.5 rounded-lg transition-all"
+                className="text-xs text-stone-500 hover:text-stone-800 border border-stone-200 hover:border-stone-400 px-3 py-1.5 rounded-lg transition-all"
               >
                 Sign out
               </button>
