@@ -117,14 +117,14 @@ export default function LandingPage() {
                 <div key={c.persona} className="bg-white rounded-2xl p-8 border border-stone-200 shadow-sm">
                   <div className="text-4xl mb-4">{c.emoji}</div>
                   <h3 className="text-xl font-bold text-stone-800 mb-4">{c.persona}</h3>
-                  <p className="text-stone-600 leading-relaxed mb-6 text-base italic border-l-4 border-red-200 pl-4">{
+                  <div className="text-stone-600 leading-relaxed mb-6 text-base italic border-l-4 border-red-200 pl-4">{
                     c.story.map((itm, i) => (
                       <div key={i} className="flex">
                         <div className="w-10 h-10 border-r-[50%]"></div>
                         <div>{itm}</div>
                       </div>
                     ))
-                    }</p>
+                    }</div>
                   <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
                     <span className="text-red-700 font-bold text-lg">{c.stat}</span>{" "}<span className="text-red-600 text-sm">{c.statLabel}</span>
                   </div>
