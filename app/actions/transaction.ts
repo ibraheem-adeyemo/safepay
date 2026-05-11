@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
 import {
@@ -369,6 +368,77 @@ export async function confirmReceipt(txnId: string): Promise<void> {
           toStatus: "COMPLETED",
           actorId: session.userId,
           note: "Buyer confirmed receipt — payment will be released to seller",
+        },
+      },
+    },
+  });
+
+  redirect(`/dashboard/transactions/${txnId}`);
+}
+
+// ─── Raise Dispute ────────────────────────────────────────────────────────────
+
+const DisputeSchema = z.object({
+  reason: z.string().min(10, "Provide a clear reason (at least 10 characters).").trim(),
+  description: z.string().max(1000).optional(),
+});
+
+export async function raiseDispute(
+  txnId: string,
+  _state: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const disputeable: TransactionStatus[] = [
+    "FUNDED",
+    "IN_PROGRESS",
+    "DELIVERED",
+    "UNDER_INSPECTION",
+  ];
+
+  const transaction = await db.transaction.findUnique({
+    where: { id: txnId },
+    include: { parties: { where: { userId: session.userId } } },
+  });
+
+  if (!transaction || transaction.parties.length === 0) {
+    return { message: "Transaction not found." };
+  }
+  if (!disputeable.includes(transaction.status)) {
+    return { message: "You cannot raise a dispute at this stage of the transaction." };
+  }
+
+  const raw = {
+    reason: formData.get("reason"),
+    description: (formData.get("description") as string) || undefined,
+  };
+
+  const validated = DisputeSchema.safeParse(raw);
+  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
+
+  const { reason, description } = validated.data;
+
+  await db.dispute.create({
+    data: {
+      transactionId: txnId,
+      raisedById: session.userId,
+      reason,
+      description: description ?? null,
+      status: "OPEN",
+    },
+  });
+  await db.transaction.update({
+    where: { id: txnId },
+    data: {
+      status: "DISPUTED",
+      statusLogs: {
+        create: {
+          fromStatus: transaction.status,
+          toStatus: "DISPUTED",
+          actorId: session.userId,
+          note: `Dispute raised: ${reason}`,
         },
       },
     },

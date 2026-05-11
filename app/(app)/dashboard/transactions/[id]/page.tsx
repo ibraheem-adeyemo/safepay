@@ -15,8 +15,8 @@ import {
   markAsDelivered,
   confirmReceipt,
 } from "@/app/actions/transaction";
-import type { PartyRole } from "@prisma/client";
 import CopyButton from "./CopyButton";
+import DisputeForm from "./DisputeForm";
 
 export default async function TransactionDetailPage({
   params,
@@ -43,7 +43,7 @@ export default async function TransactionDetailPage({
   if (!myParty) notFound(); // not a party to this transaction
 
   const counterpartyParty = transaction.parties.find((p) => p.userId !== session.userId);
-  const myRole: PartyRole = myParty.role;
+  const myRole = myParty.role;
   const counterpartyRole = getCounterpartyRole(myRole);
   const status = transaction.status;
 
@@ -222,6 +222,19 @@ export default async function TransactionDetailPage({
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Raise dispute */}
+      {["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"].includes(status) && (
+        <div className="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-4">
+          <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">
+            Problem with this transaction?
+          </p>
+          <p className="text-xs text-stone-400 mb-2">
+            If something went wrong, raise a dispute and our team will step in.
+          </p>
+          <DisputeForm txnId={id} />
         </div>
       )}
 
