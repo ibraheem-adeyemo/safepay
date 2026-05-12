@@ -332,15 +332,48 @@ Validation errors include field-level details:
 
 ## 7. Embeddable Widget — For Businesses
 
-The widget lets your counterparty accept a transaction and track its status entirely inside an `<iframe>` embedded in your product — they never leave your site.
+The widget lets your counterparty accept a transaction and track its status entirely inside an `<iframe>` embedded in your product — they never leave your site. This section walks through the complete flow from the first API call to a completed transaction.
 
-### 7.1 Embed the iframe
+---
 
-After creating a transaction and generating an invite link (§6.3), embed the `widgetUrl`:
+### A — Business creates a transaction via the API
+
+Your server calls `POST /api/v1/transactions` with your API key:
+
+```json
+{ "title": "MacBook Air M3", "amount": 950000, "role": "SELLER" }
+```
+
+SafePay creates the transaction in the database with status `CREATED`, records your account as the initiator (SELLER), and returns the transaction ID.
+
+---
+
+### B — Business generates the invite link
+
+Your server calls `POST /api/v1/transactions/:id/invite` with `{ "role": "BUYER" }`.
+
+SafePay signs a JWT containing the transaction ID and the counterparty's role, then returns:
+
+```json
+{
+  "token": "<signed-jwt>",
+  "widgetUrl": "https://safepay.ng/widget/clx...?token=<token>",
+  "shareUrl": "https://safepay.ng/t/clx...?token=<token>",
+  "expiresIn": "7 days"
+}
+```
+
+Use `widgetUrl` for the iframe embed. Use `shareUrl` if you want to send the counterparty a plain link instead (e.g. via SMS or email).
+
+---
+
+### C — Business embeds the iframe
+
+Drop the `widgetUrl` into your page:
 
 ```html
 <iframe
-  src="https://safepay.ng/widget/TRANSACTION_ID?token=INVITE_TOKEN"
+  src="https://safepay.ng/widget/clx...?token=<token>"
   width="480"
   height="640"
   style="border: none; border-radius: 16px;"
@@ -348,45 +381,138 @@ After creating a transaction and generating an invite link (§6.3), embed the `w
 ></iframe>
 ```
 
-### 7.2 postMessage events
+The counterparty sees the full escrow UI without ever leaving your site.
 
-The widget fires `window.parent.postMessage` events so your page can react to state changes without polling the API.
+---
 
-Listen for events:
+### D — Widget page loads (server-side)
+
+`/widget/[txnId]` is a server-rendered page. On every load it:
+
+1. Reads `token` and `joined` from the URL query string
+2. Fetches the full transaction from the database — including all parties and status logs
+3. Reads the visitor's session cookie (if they are already logged in to SafePay)
+4. Verifies the JWT token — checks the signature is valid and the `txnId` inside the token matches the URL
+5. Decides what to render based on who is viewing:
+
+| Condition | What the widget shows |
+|---|---|
+| Valid token + counterparty slot empty + no session | Guest accept form (name, email, phone) |
+| Valid token + counterparty slot empty + logged in | One-click "Accept as BUYER" button |
+| Visitor is already a party to the transaction | Status card, timeline, and action buttons (deliver / confirm) |
+| None of the above | Locked state — "sign in to view details" |
+
+---
+
+### E — Counterparty accepts (guest path)
+
+The guest fills in their name, email, and optionally phone number, then submits the form.
+
+This triggers the `widgetAcceptAsGuest` server action, which is pre-bound to the transaction ID and invite token. The action runs these steps in order:
+
+1. Re-verifies the JWT invite token (guards against replays after the token has expired)
+2. Validates the form fields with Zod — rejects empty or malformed inputs
+3. Checks whether the email already belongs to a fully claimed SafePay account. If it does, redirects to `/login` with a callback URL pointing back to the widget so the logged-in user can accept in one click
+4. Otherwise, finds or creates a **shadow account** (`isClaimed: false`) for the counterparty — a real database user record, but without a password yet
+5. If the shadow account already existed but was unclaimed, updates the name and phone from the form
+6. Creates a `TransactionParty` record linking the counterparty to the transaction as BUYER
+7. Moves the transaction status from `CREATED` → `AWAITING_PAYMENT` and writes a status log entry
+8. Sends `notifyCounterpartyJoined` — an email to the initiator saying their counterparty has joined
+9. Sends `notifyYouJoined` — an email to the counterparty confirming they have joined and showing the amount
+10. If the shadow account was brand new, generates a 48-hour claim token, saves it to the database, and emails the counterparty a link to `/claim?token=...` so they can set a password and access their full dashboard later
+11. Creates a session cookie for the counterparty — they are now "logged in" as the shadow account for the rest of this browser session
+12. Dispatches webhook events to your registered webhook URL (`transaction.created` event, signed with HMAC-SHA256)
+13. Redirects the iframe to `/widget/clx...?joined=1`
+
+---
+
+### F — Widget page reloads with `?joined=1`
+
+The server component re-renders. This time:
+
+- The counterparty exists in the database as a party — the widget shows their name in the parties section
+- The `joined=1` query param triggers a green success banner: *"You've joined this transaction!"*
+- The status card now shows `AWAITING_PAYMENT`
+
+A small client component called `WidgetEvents` (invisible in the UI) runs a `useEffect` and fires two `postMessage` events to the parent page:
+
+```js
+window.parent.postMessage({ type: "safepay:ready", transactionId, status }, "*");
+window.parent.postMessage({ type: "safepay:accepted", transactionId, status }, "*");
+```
+
+---
+
+### G — Business's page receives the postMessage
+
+Your page listens for events from the widget:
 
 ```js
 window.addEventListener("message", (event) => {
   if (event.origin !== "https://safepay.ng") return; // always verify origin
 
-  const { type, txnId, status } = event.data;
+  const { type, transactionId, status } = event.data;
 
   switch (type) {
-    case "safepay:joined":
-      // Counterparty accepted the invite
+    case "safepay:ready":
+      // Widget loaded — current status is in `status`
+      break;
+    case "safepay:accepted":
+      // Counterparty accepted — update your UI to show "Awaiting payment"
       break;
     case "safepay:delivered":
-      // Seller marked as delivered
+      // Seller marked as delivered — prompt buyer to inspect
       break;
     case "safepay:completed":
-      // Buyer confirmed receipt — deal is done
+      // Buyer confirmed receipt — deal is done, payment releasing to seller
       break;
-    case "safepay:status":
-      // General status update — check `status` field
+    case "safepay:cancelled":
+      // Transaction was cancelled
       break;
   }
 });
 ```
 
-| Event | When fired |
-|---|---|
-| `safepay:joined` | Counterparty accepted the invite |
-| `safepay:delivered` | Seller clicked "Mark as Delivered" |
-| `safepay:completed` | Buyer clicked "Confirm Receipt" |
-| `safepay:status` | Any other status change |
+At this point you can update your own UI, mark the order as "pending payment" in your database, send your own notification, etc.
 
-### 7.3 Shadow accounts in the widget
+---
 
-When a counterparty joins via the widget without an existing account, SafePay silently creates a shadow account for them. After joining they receive an email with a link to set a password and access their full SafePay dashboard. This is fully automatic — you do not need to handle it.
+### H — Payment, delivery, and confirmation
+
+From here every remaining step follows the same server-action → status-change → postMessage loop:
+
+| Step | Who acts | What happens in SafePay | Status transition | postMessage fired |
+|---|---|---|---|---|
+| **Payment** | Buyer sends bank transfer; SafePay admin confirms | `adminConfirmPayment` runs, writes a payment record | `AWAITING_PAYMENT` → `FUNDED` | — |
+| **Deliver** | Seller clicks "Mark as Delivered" inside the widget | `widgetMarkDelivered` runs, notifies buyer by email | `FUNDED` → `DELIVERED` | `safepay:delivered` |
+| **Confirm** | Buyer clicks "Confirm Receipt" inside the widget | `widgetConfirmReceipt` runs, notifies seller by email | `DELIVERED` → `COMPLETED` | `safepay:completed` |
+
+Each of these server actions also dispatches a webhook event to your registered endpoint — signed with HMAC-SHA256 — so your backend can react even if the user has closed the browser tab.
+
+---
+
+### Summary — two communication channels
+
+The widget uses two independent channels to keep your product informed:
+
+| Channel | Direction | Best for |
+|---|---|---|
+| `window.parent.postMessage` | Widget iframe → your page (in the browser) | Real-time UI updates — show a spinner, change a status badge, play a sound |
+| Webhooks (`X-SafePay-Signature`) | SafePay server → your server | Reliable backend updates — record the event in your database regardless of browser state |
+
+Use both. The `postMessage` events update the user's screen immediately. The webhooks are the source of truth for your backend — they arrive even if the user closes the tab mid-flow.
+
+---
+
+### Shadow accounts and claiming
+
+When a counterparty joins via the widget without an existing account, SafePay automatically:
+
+1. Creates a shadow account (`isClaimed: false`) — a real user record with no password
+2. Gives them a session cookie so they stay authenticated for the current browser session
+3. Emails them a 48-hour claim link (`/claim?token=...`) to set a password
+
+Once they claim their account they get full access to the SafePay dashboard — all past transactions, notifications, and settings. This is fully automatic; you do not need to handle any part of it.
 
 ---
 
