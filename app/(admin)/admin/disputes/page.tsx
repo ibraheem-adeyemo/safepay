@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatAmount } from "@/lib/transaction/helpers";
-import type { DisputeStatus } from "@prisma/client";
+
+type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
 
 const STATUS_TABS: { value: DisputeStatus | "ALL"; label: string }[] = [
   { value: "ALL", label: "All" },
