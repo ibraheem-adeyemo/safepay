@@ -3,9 +3,11 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
-import { verifyInviteToken } from "@/lib/transaction/helpers";
-import { notifyUser, notifyParties } from "@/lib/notifications";
+import { verifyInviteToken, formatAmount } from "@/lib/transaction/helpers";
+import { notifyParties, notifyCounterpartyJoined, notifyYouJoined } from "@/lib/notifications";
 import { dispatchWebhooks } from "@/lib/webhooks";
+import { sendEmail, emailClaimAccount } from "@/lib/email";
+import { randomBytes } from "crypto";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
 type Party = { role: string; userId: string; isInitiator: boolean };
@@ -54,7 +56,7 @@ export async function widgetAcceptAsGuest(
     phone: (formData.get("phone") as string) || undefined,
   };
   const validated = AcceptSchema.safeParse(raw);
-  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
+  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors as Record<string, string[]> };
 
   const { name, email, phone } = validated.data;
 
@@ -111,23 +113,29 @@ export async function widgetAcceptAsGuest(
     },
   });
 
+  const amountStr = formatAmount(transaction.amount);
+
   const initiator = transaction.parties.find((p: Party) => p.isInitiator);
   if (initiator) {
-    await notifyUser(
-      initiator.userId,
-      "TRANSACTION_CREATED",
-      "Your counterparty has joined",
-      `${name} joined "${transaction.title}" as the ${tokenData.role.toLowerCase()}. The escrow is now active.`,
-      txnId
-    );
+    await notifyCounterpartyJoined(initiator.userId, name, transaction.title, tokenData.role, txnId);
   }
-  await notifyUser(
-    counterparty.id,
-    "TRANSACTION_CREATED",
-    "You've joined a transaction",
-    `You've joined "${transaction.title}" as the ${tokenData.role.toLowerCase()}.`,
-    txnId
-  );
+  await notifyYouJoined(counterparty.id, transaction.title, amountStr, tokenData.role, txnId);
+
+  if (!existingUser) {
+    const claimToken = randomBytes(32).toString("hex");
+    const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    await db.user.update({
+      where: { id: counterparty.id },
+      data: { claimToken, claimTokenExp },
+    });
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+    await sendEmail({
+      to: email,
+      subject: "Secure your SafePay account",
+      html: emailClaimAccount(name, `${base}/claim?token=${claimToken}`),
+    });
+  }
+
   await dispatchWebhooks(txnId, "transaction.created", {
     transaction: { id: txnId, title: transaction.title, status: "AWAITING_PAYMENT" },
   });
@@ -196,13 +204,7 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
 
   const initiator = txn.parties.find((p: Party) => p.isInitiator);
   if (initiator) {
-    await notifyUser(
-      initiator.userId,
-      "TRANSACTION_CREATED",
-      "Your counterparty has joined",
-      `${session!.name} joined "${txn.title}" as the ${td.role.toLowerCase()}. The escrow is now active.`,
-      txnId
-    );
+    await notifyCounterpartyJoined(initiator.userId, session!.name, txn.title, td.role, txnId);
   }
   await dispatchWebhooks(txnId, "transaction.created", {
     transaction: { id: txnId, title: txn.title, status: "AWAITING_PAYMENT" },

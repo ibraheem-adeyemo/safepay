@@ -21,12 +21,33 @@ const ClaimSchema = z.object({
 });
 
 export async function claimAccount(_state: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const token = (formData.get("claimToken") as string) || null;
 
-  const user = await db.user.findUnique({ where: { id: session.userId } });
-  if (!user) redirect("/login");
-  if (user.isClaimed) return { message: "Your account is already fully set up." };
+  let user: { id: string; accountType: string; name: string; isClaimed: boolean } | null = null;
+
+  if (token) {
+    // Token-based path: user clicked the email link on a device with no session
+    const found = await db.user.findFirst({
+      where: { claimToken: token },
+      select: { id: true, accountType: true, name: true, isClaimed: true, claimTokenExp: true },
+    });
+    if (!found || found.isClaimed) return { message: "This link is invalid or has already been used." };
+    if (!found.claimTokenExp || found.claimTokenExp < new Date()) {
+      return { message: "This link has expired. Please contact support to get a new one." };
+    }
+    user = found;
+  } else {
+    // Session-based path: user is already logged in as a shadow account
+    const session = await getSession();
+    if (!session) redirect("/login");
+    const found = await db.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true, accountType: true, name: true, isClaimed: true },
+    });
+    if (!found) redirect("/login");
+    if (found.isClaimed) return { message: "Your account is already fully set up." };
+    user = found;
+  }
 
   const raw = {
     password: formData.get("password"),
@@ -34,25 +55,24 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
   };
 
   const validated = ClaimSchema.safeParse(raw);
-  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
+  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors as Record<string, string[]> };
 
   const { password } = validated.data;
   const passwordHash = await hash(password, 12);
 
   await db.user.update({
-    where: { id: session.userId },
+    where: { id: user.id },
     data: { passwordHash, isClaimed: true, claimToken: null, claimTokenExp: null },
   });
 
-  // Refresh session so isClaimed state is reflected (recreate with same data)
   await createSession({
     userId: user.id,
-    accountType: user.accountType,
+    accountType: user.accountType as "PERSONAL" | "BUSINESS",
     name: user.name,
   });
 
   await notifyUser(
-    session!.userId,
+    user.id,
     "ACCOUNT_CLAIMED",
     "Account secured",
     "Your SafePay account is now fully set up. Welcome to SafePay!"
