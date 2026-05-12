@@ -21,7 +21,9 @@ function createPrismaClient() {
   });
 }
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as typeof globalThis & {
+  prisma?: ReturnType<typeof createPrismaClient>;
+};
 
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
