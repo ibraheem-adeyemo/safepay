@@ -443,35 +443,100 @@ window.parent.postMessage({ type: "safepay:accepted", transactionId, status }, "
 
 ---
 
-### G — Business's page receives the postMessage
+### G — Business's page receives and sends postMessage events
 
-Your page listens for events from the widget:
+The widget fires events outward AND listens for commands inward. Your page must handle both directions.
+
+#### Receiving events from the widget
 
 ```js
 window.addEventListener("message", (event) => {
-  if (event.origin !== "https://safepay.ng") return; // always verify origin
-
+  // Filter by message type — do NOT filter by origin.
+  // The widget is served from safepay.ng but your page may be on any domain,
+  // and origin-based filtering on the receiver side does nothing useful here.
   const { type, transactionId, status } = event.data;
 
   switch (type) {
     case "safepay:ready":
-      // Widget loaded — current status is in `status`
+      // Widget page rendered — `status` holds the current transaction status.
+      // Use this to know the iframe is alive, but do NOT send prefill here —
+      // React hasn't hydrated yet so the form listener isn't registered.
       break;
+
+    case "safepay:formReady":
+      // The accept form has mounted and its message listener is registered.
+      // THIS is the correct moment to send prefill data (see below).
+      sendPrefill();
+      break;
+
     case "safepay:accepted":
-      // Counterparty accepted — update your UI to show "Awaiting payment"
+      // Counterparty accepted — update your UI to "Awaiting payment"
       break;
+
     case "safepay:delivered":
       // Seller marked as delivered — prompt buyer to inspect
       break;
+
     case "safepay:completed":
-      // Buyer confirmed receipt — deal is done, payment releasing to seller
+      // Buyer confirmed receipt — payment releasing to seller
       break;
+
     case "safepay:cancelled":
       // Transaction was cancelled
       break;
   }
 });
 ```
+
+#### Sending prefill data to the widget (postMessage path)
+
+**Critical:** send prefill only after receiving `safepay:formReady` — not on `iframe.onLoad`.
+
+`onLoad` fires when the initial HTML arrives, before React has hydrated and the form's event listener exists. Messages sent at that point are silently dropped. `safepay:formReady` is emitted by the form component itself, immediately after its listener is registered — so it is guaranteed to arrive after the listener is ready.
+
+```js
+const iframe = document.getElementById("safepay-widget");
+
+function sendPrefill() {
+  iframe.contentWindow.postMessage(
+    {
+      type: "prefill",
+      data: {
+        name: "Amaka Okafor",
+        email: "amaka@yourplatform.com",
+        phone: "+2348012345678",
+      },
+    },
+    "https://safepay.ng" // targetOrigin — locks delivery to the SafePay iframe only
+  );
+}
+
+window.addEventListener("message", (event) => {
+  if (event.data?.type === "safepay:formReady") {
+    sendPrefill();
+  }
+  // ... other event handlers
+});
+```
+
+**postMessage event reference** — widget → parent:
+
+| Event | Payload | When fired |
+|---|---|---|
+| `safepay:ready` | `{ transactionId, status }` | Widget page rendered (before React hydration) |
+| `safepay:formReady` | `{}` | Accept form mounted, ready to receive prefill |
+| `safepay:accepted` | `{ transactionId, status }` | Counterparty accepted the invite |
+| `safepay:delivered` | `{ transactionId }` | Seller clicked "Mark as Delivered" |
+| `safepay:completed` | `{ transactionId }` | Buyer clicked "Confirm Receipt" |
+| `safepay:cancelled` | `{ transactionId }` | Transaction cancelled |
+
+**postMessage command reference** — parent → widget:
+
+| Message | Payload | Effect |
+|---|---|---|
+| `prefill` | `{ data: { name?, email?, phone? } }` | Pre-fills form fields that are still empty |
+
+> **Note:** `safepay:formReady` is only emitted when the accept form is visible — i.e. a valid invite token is present and the counterparty slot is empty. If the widget is showing a transaction in progress (both parties already joined), the form never renders and `safepay:formReady` is never sent.
 
 At this point you can update your own UI, mark the order as "pending payment" in your database, send your own notification, etc.
 

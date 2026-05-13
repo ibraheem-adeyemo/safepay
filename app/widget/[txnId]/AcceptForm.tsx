@@ -19,8 +19,9 @@ export default function WidgetAcceptForm({
   const [email, setEmail] = useState(defaultValues.email ?? "");
   const [phone, setPhone] = useState(defaultValues.phone ?? "");
 
-  // postMessage fallback: business sends { type: "prefill", data: { name?, email?, phone? } }
-  // after the iframe's onLoad fires. Fills any fields that aren't already populated.
+  // postMessage prefill: register listener first, then tell the parent we're ready.
+  // The parent must send prefill AFTER receiving safepay:formReady — not on iframe onLoad,
+  // because onLoad fires before React has hydrated and this listener exists.
   useEffect(() => {
     function handler(event: MessageEvent) {
       if (event.data?.type !== "prefill") return;
@@ -30,6 +31,8 @@ export default function WidgetAcceptForm({
       if (d.phone) setPhone((prev) => prev || d.phone);
     }
     window.addEventListener("message", handler);
+    // Signal to the parent that the form is mounted and ready to receive prefill.
+    window.parent.postMessage({ type: "safepay:formReady" }, "*");
     return () => window.removeEventListener("message", handler);
   }, []);
 
