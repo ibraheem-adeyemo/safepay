@@ -86,11 +86,32 @@ export default async function WidgetPage({
 
       {/* ── Joined success banner ── */}
       {joined === "1" && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
-          <p className="font-bold text-emerald-800 text-sm">You've joined this transaction!</p>
-          <p className="text-xs text-emerald-700 mt-0.5">
-            SafePay is holding the escrow. You'll be notified as it progresses.
-          </p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-4 space-y-3">
+          <div>
+            <p className="font-bold text-emerald-800 text-sm">You've joined this transaction!</p>
+            <p className="text-xs text-emerald-700 mt-0.5">
+              SafePay is holding the escrow. You'll be notified as it progresses.
+            </p>
+          </div>
+          {myParty && !myParty.user.isClaimed && (
+            <div className="border-t border-emerald-200 pt-3 space-y-2">
+              <p className="text-xs text-emerald-800">
+                <strong>Check your email</strong> — we sent a link to{" "}
+                <span className="font-mono">{myParty.user.email}</span> to set up your SafePay password.
+              </p>
+              <a
+                href="/claim"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
+              >
+                Set up my SafePay account →
+              </a>
+              <p className="text-xs text-emerald-600 text-center">
+                Opens in a new tab — your transaction stays open here.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

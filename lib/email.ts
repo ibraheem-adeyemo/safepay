@@ -21,8 +21,8 @@ export async function sendEmail({
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({ from: FROM, to, subject, html });
-  } catch {
-    // Best-effort — email failures must never break the calling action
+  } catch (err) {
+    console.error("[email] send failed:", err);
   }
 }
 
