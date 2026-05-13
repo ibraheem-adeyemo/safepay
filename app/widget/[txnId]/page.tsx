@@ -15,8 +15,6 @@ import {
 import { WidgetEvents } from "./WidgetEvents";
 import WidgetAcceptForm from "./AcceptForm";
 
-type Party = { role: string; userId: string; isInitiator: boolean };
-
 export default async function WidgetPage({
   params,
   searchParams,
@@ -40,7 +38,7 @@ export default async function WidgetPage({
 
   if (!transaction) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] px-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-75 px-6 text-center">
         <div className="text-4xl mb-3">🔍</div>
         <h1 className="text-base font-bold text-stone-800 mb-1">Transaction not found</h1>
         <p className="text-stone-500 text-sm">This link may have expired or been removed.</p>
@@ -249,7 +247,11 @@ export default async function WidgetPage({
           <p className="text-stone-500 text-xs mb-4">
             You've been invited as the <strong>{expectedRole}</strong>. Enter your details to join.
           </p>
-          <WidgetAcceptForm expectedRole={expectedRole} action={guestAcceptAction} />
+          <WidgetAcceptForm
+            expectedRole={expectedRole}
+            action={guestAcceptAction}
+            defaultValues={tokenData?.prefill}
+          />
         </div>
       )}
 

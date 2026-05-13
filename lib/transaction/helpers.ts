@@ -17,12 +17,17 @@ export function generateReference(): string {
   return `SPY-${date}-${rand}`;
 }
 
+export type InvitePrefill = { name?: string; email?: string; phone?: string };
+
 // Signed JWT embedded in the counterparty share link
 export async function generateInviteToken(
   txnId: string,
-  counterpartyRole: PartyRole
+  counterpartyRole: PartyRole,
+  prefill?: InvitePrefill
 ): Promise<string> {
-  return new SignJWT({ txnId, role: counterpartyRole })
+  const claims: Record<string, unknown> = { txnId, role: counterpartyRole };
+  if (prefill && Object.values(prefill).some(Boolean)) claims.prefill = prefill;
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -31,12 +36,12 @@ export async function generateInviteToken(
 
 export async function verifyInviteToken(
   token: string
-): Promise<{ txnId: string; role: PartyRole } | null> {
+): Promise<{ txnId: string; role: PartyRole; prefill?: InvitePrefill } | null> {
   try {
     const { payload } = await jwtVerify(token, getEncodedKey(), {
       algorithms: ["HS256"],
     });
-    return payload as unknown as { txnId: string; role: PartyRole };
+    return payload as unknown as { txnId: string; role: PartyRole; prefill?: InvitePrefill };
   } catch {
     return null;
   }
