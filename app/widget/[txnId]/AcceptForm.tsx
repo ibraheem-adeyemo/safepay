@@ -1,17 +1,37 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useEffect } from "react";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
+type Prefill = { name?: string; email?: string; phone?: string };
 
 export default function WidgetAcceptForm({
   expectedRole,
   action,
+  defaultValues = {},
 }: {
   expectedRole: string;
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  defaultValues?: Prefill;
 }) {
   const [state, formAction, isPending] = useActionState(action, undefined);
+  const [name, setName] = useState(defaultValues.name ?? "");
+  const [email, setEmail] = useState(defaultValues.email ?? "");
+  const [phone, setPhone] = useState(defaultValues.phone ?? "");
+
+  // postMessage fallback: business sends { type: "prefill", data: { name?, email?, phone? } }
+  // after the iframe's onLoad fires. Fills any fields that aren't already populated.
+  useEffect(() => {
+    function handler(event: MessageEvent) {
+      if (event.data?.type !== "prefill") return;
+      const d = event.data.data ?? {};
+      if (d.name)  setName((prev) => prev || d.name);
+      if (d.email) setEmail((prev) => prev || d.email);
+      if (d.phone) setPhone((prev) => prev || d.phone);
+    }
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   return (
     <form action={formAction} className="space-y-3">
@@ -33,6 +53,8 @@ export default function WidgetAcceptForm({
           type="text"
           autoComplete="name"
           placeholder="e.g. Amaka Okafor"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className={`w-full px-3 py-2.5 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
             state?.errors?.name ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"
           }`}
@@ -49,6 +71,8 @@ export default function WidgetAcceptForm({
           type="email"
           autoComplete="email"
           placeholder="you@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className={`w-full px-3 py-2.5 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
             state?.errors?.email ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"
           }`}
@@ -67,6 +91,8 @@ export default function WidgetAcceptForm({
           type="tel"
           autoComplete="tel"
           placeholder="+2348012345678"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           className={`w-full px-3 py-2.5 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
             state?.errors?.phone ? "border-red-400 bg-red-50" : "border-stone-300 bg-stone-50"
           }`}
