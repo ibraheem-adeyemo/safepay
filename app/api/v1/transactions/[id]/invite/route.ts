@@ -9,6 +9,11 @@ import {
 
 const InviteSchema = z.object({
   role: z.enum(["BUYER", "SELLER"]),
+  prefill: z.object({
+    name: z.string().trim().optional(),
+    email: z.string().email().trim().toLowerCase().optional(),
+    phone: z.string().optional(),
+  }).optional(),
 });
 
 // POST /api/v1/transactions/:id/invite
@@ -80,7 +85,7 @@ export async function POST(
     return Response.json({ error: "The counterparty slot is already filled" }, { status: 409 });
   }
 
-  const token = await generateInviteToken(id, counterpartyRole);
+  const token = await generateInviteToken(id, counterpartyRole, validated.data.prefill);
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return Response.json({
