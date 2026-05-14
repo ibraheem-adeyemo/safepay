@@ -67,12 +67,19 @@ export async function widgetAcceptAsGuest(
 
   const { name, email, phone } = validated.data;
 
-  const existingUser = await db.user.findUnique({ where: { email } });
+  const [existingUser, phoneTaken] = await Promise.all([
+    db.user.findUnique({ where: { email } }),
+    phone ? db.user.findUnique({ where: { phone } }) : Promise.resolve(null),
+  ]);
+
   if (existingUser?.isClaimed) {
     redirect(
       `/login?callbackUrl=${encodeURIComponent(`/widget/${txnId}?token=${token}`)}&email=${encodeURIComponent(email)}&hint=widget`
     );
   }
+
+  // Only save the phone if it isn't already registered to a different account
+  const safePhone = phone && !phoneTaken ? phone : null;
 
   const counterparty =
     existingUser ??
@@ -80,7 +87,7 @@ export async function widgetAcceptAsGuest(
       data: {
         name,
         email,
-        phone: phone || null,
+        phone: safePhone,
         accountType: "PERSONAL",
         isClaimed: false,
         channel: "WIDGET",
@@ -90,7 +97,7 @@ export async function widgetAcceptAsGuest(
   if (existingUser && !existingUser.isClaimed) {
     await db.user.update({
       where: { id: existingUser.id },
-      data: { name, phone: phone || existingUser.phone },
+      data: { name, phone: safePhone ?? existingUser.phone },
     });
   }
 
