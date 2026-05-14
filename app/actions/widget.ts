@@ -217,7 +217,7 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
 
 export async function widgetMarkDelivered(txnId: string): Promise<void> {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/widget/${txnId}?error=auth_required`);
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },
@@ -265,7 +265,7 @@ export async function widgetMarkDelivered(txnId: string): Promise<void> {
 
 export async function widgetConfirmReceipt(txnId: string): Promise<void> {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/widget/${txnId}?error=auth_required`);
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },
