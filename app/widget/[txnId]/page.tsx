@@ -126,6 +126,15 @@ export default async function WidgetPage({
           You initiated this transaction and cannot also be the counterparty.
         </div>
       )}
+      {error === "auth_required" && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800">
+          Your session expired. Please{" "}
+          <a href="/login" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+            sign in
+          </a>{" "}
+          and return here to continue.
+        </div>
+      )}
 
       {/* ── Transaction card ── */}
       <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
