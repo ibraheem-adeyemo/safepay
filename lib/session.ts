@@ -44,11 +44,15 @@ export async function createSession(payload: Omit<SessionPayload, "expiresAt">) 
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const token = await encryptSession({ ...payload, expiresAt: expiresAt.toISOString() });
 
+  const isProd = process.env.NODE_ENV === "production";
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    // SameSite=None + Secure=true lets the session cookie be sent inside
+    // cross-site iframes (embedded widget). SameSite=Lax is fine for local dev
+    // because the widget runs on the same origin there.
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     expires: expiresAt,
     path: "/",
   });
@@ -67,14 +71,15 @@ export async function deleteSession() {
 }
 
 export async function refreshSession(payload: SessionPayload) {
+  const isProd = process.env.NODE_ENV === "production";
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   const token = await encryptSession({ ...payload, expiresAt: expiresAt.toISOString() });
 
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     expires: expiresAt,
     path: "/",
   });
