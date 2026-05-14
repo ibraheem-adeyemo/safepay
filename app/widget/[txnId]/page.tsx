@@ -347,6 +347,18 @@ export default async function WidgetPage({
         </div>
       )}
 
+      {/* ── Initiator waiting for counterparty ── */}
+      {myParty?.isInitiator && transaction.status === "CREATED" && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-5">
+          <p className="text-sm font-bold text-blue-800 mb-1">Waiting for the other party</p>
+          <p className="text-xs text-blue-700">
+            Share this page link with the{" "}
+            <strong>{initiatorParty ? getCounterpartyRole(initiatorParty.role) : "counterparty"}</strong>{" "}
+            so they can join and complete the transaction.
+          </p>
+        </div>
+      )}
+
       {/* ── Locked state (not a party, not invited) ── */}
       {!canAccept && !myParty && !["COMPLETED", "CANCELLED", "DISPUTED"].includes(transaction.status) && (
         <div className="bg-white rounded-2xl border border-stone-200 px-5 py-6 text-center">
