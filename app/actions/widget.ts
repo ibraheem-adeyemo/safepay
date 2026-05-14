@@ -63,7 +63,7 @@ export async function widgetAcceptAsGuest(
   const existingUser = await db.user.findUnique({ where: { email } });
   if (existingUser?.isClaimed) {
     redirect(
-      `/login?callbackUrl=${encodeURIComponent(`/widget/${txnId}?token=${token}`)}`
+      `/login?callbackUrl=${encodeURIComponent(`/widget/${txnId}?token=${token}`)}&email=${encodeURIComponent(email)}&hint=widget`
     );
   }
 
