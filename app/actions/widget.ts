@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
-import { verifyInviteToken, formatAmount } from "@/lib/transaction/helpers";
+import { verifyInviteToken, formatAmount, getCounterpartyRole } from "@/lib/transaction/helpers";
 import { notifyParties, notifyCounterpartyJoined, notifyYouJoined } from "@/lib/notifications";
 import { dispatchWebhooks } from "@/lib/webhooks";
 import { sendEmail, emailClaimAccount } from "@/lib/email";
 import { randomBytes } from "crypto";
+import type { PartyRole } from "@prisma/client";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
 type Party = { role: string; userId: string; isInitiator: boolean };
@@ -32,8 +33,10 @@ export async function widgetAcceptAsGuest(
   _state: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const tokenData = await verifyInviteToken(token);
-  if (!tokenData || tokenData.txnId !== txnId) {
+  // Token is optional — the widget is embedded by the business in their own platform.
+  // If a token is present, verify it; if not, derive the counterparty role from the transaction.
+  const tokenData = token ? await verifyInviteToken(token) : null;
+  if (token && (!tokenData || tokenData.txnId !== txnId)) {
     return { message: "This invite link is invalid or has expired." };
   }
 
@@ -47,7 +50,11 @@ export async function widgetAcceptAsGuest(
     return { message: "This transaction is no longer open for acceptance." };
   }
 
-  const slotTaken = transaction.parties.some((p: Party) => p.role === tokenData.role);
+  // Derive counterparty role from token or from the initiator's role
+  const initiator = transaction.parties.find((p: Party) => p.isInitiator);
+  const counterpartyRole: PartyRole = tokenData?.role ?? (initiator ? getCounterpartyRole(initiator.role as PartyRole) : "BUYER");
+
+  const slotTaken = transaction.parties.some((p: Party) => p.role === counterpartyRole);
   if (slotTaken) return { message: "This transaction has already been accepted." };
 
   const raw = {
@@ -91,7 +98,7 @@ export async function widgetAcceptAsGuest(
     data: {
       transactionId: txnId,
       userId: counterparty.id,
-      role: tokenData.role,
+      role: counterpartyRole,
       isInitiator: false,
       accepted: true,
       acceptedAt: new Date(),
@@ -107,7 +114,7 @@ export async function widgetAcceptAsGuest(
           fromStatus: "CREATED",
           toStatus: "AWAITING_PAYMENT",
           actorId: counterparty.id,
-          note: `${tokenData.role} joined via widget`,
+          note: `${counterpartyRole} joined via widget`,
         },
       },
     },
@@ -115,11 +122,10 @@ export async function widgetAcceptAsGuest(
 
   const amountStr = formatAmount(transaction.amount);
 
-  const initiator = transaction.parties.find((p: Party) => p.isInitiator);
   if (initiator) {
-    await notifyCounterpartyJoined(initiator.userId, name, transaction.title, tokenData.role, txnId);
+    await notifyCounterpartyJoined(initiator.userId, name, transaction.title, counterpartyRole, txnId);
   }
-  await notifyYouJoined(counterparty.id, transaction.title, amountStr, tokenData.role, txnId);
+  await notifyYouJoined(counterparty.id, transaction.title, amountStr, counterpartyRole, txnId);
 
   if (!existingUser) {
     const claimToken = randomBytes(32).toString("hex");
@@ -157,8 +163,9 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
     redirect(`/login?callbackUrl=${encodeURIComponent(`/widget/${txnId}?token=${token}`)}`);
   }
 
-  const tokenData = await verifyInviteToken(token);
-  if (!tokenData || tokenData.txnId !== txnId) redirect(`/widget/${txnId}?error=invalid_token`);
+  // Token is optional — verify only when provided
+  const tokenData = token ? await verifyInviteToken(token) : null;
+  if (token && (!tokenData || tokenData.txnId !== txnId)) redirect(`/widget/${txnId}?error=invalid_token`);
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },
@@ -167,10 +174,13 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
 
   if (!transaction || transaction.status !== "CREATED") redirect(`/widget/${txnId}`);
 
-  const td = tokenData!;
   const txn = transaction!;
 
-  const slotTaken = txn.parties.some((p: Party) => p.role === td.role);
+  // Derive counterparty role from token or from the initiator's existing role
+  const initiator = txn.parties.find((p: Party) => p.isInitiator);
+  const counterpartyRole: PartyRole = tokenData?.role ?? (initiator ? getCounterpartyRole(initiator.role as PartyRole) : "BUYER");
+
+  const slotTaken = txn.parties.some((p: Party) => p.role === counterpartyRole);
   if (slotTaken) redirect(`/widget/${txnId}`);
 
   const isInitiator = txn.parties.some((p: Party) => p.userId === session!.userId);
@@ -180,7 +190,7 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
     data: {
       transactionId: txnId,
       userId: session!.userId,
-      role: td.role,
+      role: counterpartyRole,
       isInitiator: false,
       accepted: true,
       acceptedAt: new Date(),
@@ -196,15 +206,14 @@ export async function widgetAcceptAsLoggedIn(txnId: string, token: string): Prom
           fromStatus: "CREATED",
           toStatus: "AWAITING_PAYMENT",
           actorId: session!.userId,
-          note: `${td.role} joined via widget`,
+          note: `${counterpartyRole} joined via widget`,
         },
       },
     },
   });
 
-  const initiator = txn.parties.find((p: Party) => p.isInitiator);
   if (initiator) {
-    await notifyCounterpartyJoined(initiator.userId, session!.name, txn.title, td.role, txnId);
+    await notifyCounterpartyJoined(initiator.userId, session!.name, txn.title, counterpartyRole, txnId);
   }
   await dispatchWebhooks(txnId, "transaction.created", {
     transaction: { id: txnId, title: txn.title, status: "AWAITING_PAYMENT" },
