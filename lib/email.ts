@@ -205,6 +205,16 @@ export function emailClaimAccount(name: string, claimUrl: string) {
   `);
 }
 
+export function emailPasswordReset(name: string, resetUrl: string) {
+  return layout(`
+    ${h2("Reset your SafePay password")}
+    ${p(`Hi ${firstName(name)}, we received a request to reset the password on your SafePay account.`)}
+    ${p(`Click the button below to choose a new password. If you didn't request this, you can safely ignore this email.`)}
+    <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 1 hour.</p>
+    ${btn(resetUrl, "Reset My Password")}
+  `);
+}
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function firstName(name: string) {

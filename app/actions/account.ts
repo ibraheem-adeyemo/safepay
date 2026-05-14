@@ -7,6 +7,7 @@ import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
 import { notifyUser } from "@/lib/notifications";
+import { sendEmail, emailPasswordReset } from "@/lib/email";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string; success?: boolean } | undefined;
 
@@ -319,4 +320,83 @@ export async function deleteWebhook(webhookId: string): Promise<void> {
 
   await db.webhook.deleteMany({ where: { id: webhookId, businessId: business.id } });
   redirect("/dashboard/settings/webhooks");
+}
+
+// ─── Request Password Reset ───────────────────────────────────────────────────
+
+export async function requestPasswordReset(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  if (!email) return { errors: { email: ["Enter your email address."] } };
+
+  const user = await db.user.findUnique({ where: { email }, select: { id: true, name: true, isClaimed: true } });
+
+  // Always return success to avoid leaking whether the email exists
+  if (!user || !user.isClaimed) {
+    return { success: true, message: "If that email has an account, a reset link is on its way." };
+  }
+
+  const resetToken = randomBytes(32).toString("hex");
+  const resetTokenExp = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { claimToken: resetToken, claimTokenExp: resetTokenExp },
+  });
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+  await sendEmail({
+    to: email,
+    subject: "Reset your SafePay password",
+    html: emailPasswordReset(user.name, `${base}/claim/reset?token=${resetToken}`),
+  });
+
+  return { success: true, message: "If that email has an account, a reset link is on its way." };
+}
+
+// ─── Reset Password (via token) ───────────────────────────────────────────────
+
+const ResetSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  confirmPassword: z.string(),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+export async function resetPassword(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const token = (formData.get("resetToken") as string) || "";
+  if (!token) return { message: "Invalid or missing reset token." };
+
+  const user = await db.user.findFirst({
+    where: { claimToken: token },
+    select: { id: true, accountType: true, name: true, claimTokenExp: true },
+  });
+
+  if (!user) return { message: "This reset link is invalid or has already been used." };
+  if (!user.claimTokenExp || user.claimTokenExp < new Date()) {
+    return { message: "This reset link has expired. Please request a new one." };
+  }
+
+  const raw = {
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  };
+
+  const validated = ResetSchema.safeParse(raw);
+  if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors as Record<string, string[]> };
+
+  const passwordHash = await hash(validated.data.password, 12);
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash, isClaimed: true, claimToken: null, claimTokenExp: null },
+  });
+
+  await createSession({
+    userId: user.id,
+    accountType: user.accountType as "PERSONAL" | "BUSINESS",
+    name: user.name,
+  });
+
+  redirect("/dashboard?reset=1");
 }
