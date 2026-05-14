@@ -47,7 +47,6 @@ export default async function WidgetPage({
   }
 
   const tokenData = token ? await verifyInviteToken(token) : null;
-  const tokenValid = tokenData?.txnId === txnId;
 
   const myParty = session
     ? transaction.parties.find((p) => p.userId === session.userId)
@@ -57,8 +56,9 @@ export default async function WidgetPage({
   const counterpartyParty = transaction.parties.find((p) => !p.isInitiator);
 
   const counterpartySlotEmpty = !counterpartyParty;
+  // Allow accepting without a token — the widget is embedded by the business in their
+  // own authenticated platform, so the txnId alone is sufficient access control.
   const canAccept =
-    tokenValid &&
     counterpartySlotEmpty &&
     transaction.status === "CREATED" &&
     !myParty;
@@ -66,7 +66,9 @@ export default async function WidgetPage({
   const canAcceptAsLoggedIn = canAccept && !!session;
   const needsAcceptForm = canAccept && !session;
 
-  const expectedRole = tokenData?.role ?? null;
+  // Role from token if present; otherwise derive from the initiator's role
+  const expectedRole =
+    tokenData?.role ?? (initiatorParty ? getCounterpartyRole(initiatorParty.role) : null);
   const statusMeta = STATUS_META[transaction.status] ?? { label: transaction.status, colour: "text-stone-500", bg: "bg-stone-100" };
 
   // Bound server actions
