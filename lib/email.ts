@@ -88,7 +88,7 @@ export function emailTransactionCreated(
 ) {
   return layout(`
     ${h2(`Your escrow is ready, ${firstName(name)}!`)}
-    ${p(`Your SafePay escrow for <strong>${title}</strong> has been created for ₦${amount}.`)}
+    ${p(`Your SafePay escrow for <strong>${esc(title)}</strong> has been created for ₦${esc(amount)}.`)}
     ${p(`Share the invite link with the other party to activate the deal.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -103,7 +103,7 @@ export function emailCounterpartyJoined(
 ) {
   return layout(`
     ${h2("Your counterparty has joined!")}
-    ${p(`Hi ${firstName(name)}, <strong>${counterpartyName}</strong> has joined your escrow for <strong>${title}</strong> as the ${role.toLowerCase()}. The deal is now active.`)}
+    ${p(`Hi ${firstName(name)}, <strong>${esc(counterpartyName)}</strong> has joined your escrow for <strong>${esc(title)}</strong> as the ${esc(role.toLowerCase())}. The deal is now active.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -117,7 +117,7 @@ export function emailYouJoined(
 ) {
   return layout(`
     ${h2("You've joined an escrow!")}
-    ${p(`Hi ${firstName(name)}, you've joined <strong>${title}</strong> as the <strong>${role.toLowerCase()}</strong> for ₦${amount}.`)}
+    ${p(`Hi ${firstName(name)}, you've joined <strong>${esc(title)}</strong> as the <strong>${esc(role.toLowerCase())}</strong> for ₦${esc(amount)}.`)}
     ${p(`Your payment is protected by SafePay until the deal is complete.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -131,7 +131,7 @@ export function emailPaymentConfirmed(
 ) {
   return layout(`
     ${h2("Payment confirmed — escrow funded ✅")}
-    ${p(`Hi ${firstName(name)}, the payment of ₦${amount} for <strong>${title}</strong> has been confirmed and secured in escrow.`)}
+    ${p(`Hi ${firstName(name)}, the payment of ₦${esc(amount)} for <strong>${esc(title)}</strong> has been confirmed and secured in escrow.`)}
     ${p(`The seller can now proceed with delivery.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -144,7 +144,7 @@ export function emailItemDelivered(
 ) {
   return layout(`
     ${h2("Item marked as delivered 📦")}
-    ${p(`Hi ${firstName(name)}, the seller has marked <strong>${title}</strong> as delivered. Please review and confirm receipt to release the payment.`)}
+    ${p(`Hi ${firstName(name)}, the seller has marked <strong>${esc(title)}</strong> as delivered. Please review and confirm receipt to release the payment.`)}
     ${btn(txnUrl(txnId), "Confirm Receipt")}
   `);
 }
@@ -157,7 +157,7 @@ export function emailTransactionCompleted(
 ) {
   return layout(`
     ${h2("Transaction completed 🎉")}
-    ${p(`Hi ${firstName(name)}, the buyer has confirmed receipt of <strong>${title}</strong>. Payment of ₦${amount} will be released to you.`)}
+    ${p(`Hi ${firstName(name)}, the buyer has confirmed receipt of <strong>${esc(title)}</strong>. Payment of ₦${esc(amount)} will be released to you.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -169,7 +169,7 @@ export function emailDisputeRaised(
 ) {
   return layout(`
     ${h2("A dispute has been raised ⚠️")}
-    ${p(`Hi ${firstName(name)}, a dispute has been raised on <strong>${title}</strong>.`)}
+    ${p(`Hi ${firstName(name)}, a dispute has been raised on <strong>${esc(title)}</strong>.`)}
     ${p(`Our team will review the situation and reach out to both parties shortly.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -182,7 +182,7 @@ export function emailDisputeResolved(
 ) {
   return layout(`
     ${h2("Dispute resolved ✅")}
-    ${p(`Hi ${firstName(name)}, the dispute on <strong>${title}</strong> has been resolved by our team.`)}
+    ${p(`Hi ${firstName(name)}, the dispute on <strong>${esc(title)}</strong> has been resolved by our team.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -190,7 +190,7 @@ export function emailDisputeResolved(
 export function emailTransactionCancelled(name: string, title: string) {
   return layout(`
     ${h2("Transaction cancelled")}
-    ${p(`Hi ${firstName(name)}, the escrow for <strong>${title}</strong> has been cancelled. No funds have been taken.`)}
+    ${p(`Hi ${firstName(name)}, the escrow for <strong>${esc(title)}</strong> has been cancelled. No funds have been taken.`)}
     <p style="margin:24px 0 0;font-size:13px;color:#a8a29e;">If you have any questions, reply to this email or visit SafePay.</p>
   `);
 }
@@ -215,8 +215,18 @@ export function emailPasswordReset(name: string, resetUrl: string) {
   `);
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function firstName(name: string) {
-  return name.split(" ")[0];
+  return esc(name.split(" ")[0]);
+}
+
+// Escape user-controlled strings before embedding in HTML email bodies
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
 }

@@ -14,11 +14,14 @@ export async function authenticateApiKey(
   const prefix = token.slice(0, 15);
   const apiKey = await db.apiKey.findFirst({
     where: { prefix, isActive: true },
+    select: { id: true, userId: true, keyHash: true, expiresAt: true },
   });
   if (!apiKey) return null;
 
   const valid = await compare(token, apiKey.keyHash);
   if (!valid) return null;
+
+  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null;
 
   // Non-blocking timestamp update
   db.apiKey
