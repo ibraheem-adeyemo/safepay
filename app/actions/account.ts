@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
 import { notifyUser } from "@/lib/notifications";
 import { sendEmail, emailPasswordReset } from "@/lib/email";
+import { isSafeWebhookUrl } from "@/lib/ssrf";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string; success?: boolean } | undefined;
 
@@ -162,7 +163,7 @@ export async function changePassword(_state: ActionState, formData: FormData): P
   if (!valid) return { errors: { currentPassword: ["Incorrect password."] } };
 
   const passwordHash = await hash(newPassword, 12);
-  await db.user.update({ where: { id: session.userId }, data: { passwordHash } });
+  await db.user.update({ where: { id: session.userId }, data: { passwordHash, passwordChangedAt: new Date() } });
 
   return { success: true, message: "Password updated successfully." };
 }
@@ -293,6 +294,11 @@ export async function addWebhook(_state: ActionState, formData: FormData): Promi
   if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
 
   const { url, events } = validated.data;
+
+  if (!isSafeWebhookUrl(url)) {
+    return { errors: { url: ["Webhook URL must point to a public internet host."] } };
+  }
+
   const validEvents = events.filter((e) => VALID_EVENTS.includes(e));
 
   const secret = randomBytes(24).toString("hex");
@@ -340,7 +346,7 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
 
   await db.user.update({
     where: { id: user.id },
-    data: { claimToken: resetToken, claimTokenExp: resetTokenExp },
+    data: { resetToken, resetTokenExp },
   });
 
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
@@ -368,12 +374,12 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
   if (!token) return { message: "Invalid or missing reset token." };
 
   const user = await db.user.findFirst({
-    where: { claimToken: token },
-    select: { id: true, accountType: true, name: true, claimTokenExp: true },
+    where: { resetToken: token },
+    select: { id: true, accountType: true, name: true, resetTokenExp: true },
   });
 
   if (!user) return { message: "This reset link is invalid or has already been used." };
-  if (!user.claimTokenExp || user.claimTokenExp < new Date()) {
+  if (!user.resetTokenExp || user.resetTokenExp < new Date()) {
     return { message: "This reset link has expired. Please request a new one." };
   }
 
@@ -389,7 +395,7 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
 
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash, isClaimed: true, claimToken: null, claimTokenExp: null },
+    data: { passwordHash, isClaimed: true, resetToken: null, resetTokenExp: null, passwordChangedAt: new Date() },
   });
 
   await createSession({

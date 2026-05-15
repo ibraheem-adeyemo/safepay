@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { hash, compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
+import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from "@/lib/rate-limit";
 import {
   RegisterSchema,
   LoginSchema,
@@ -96,9 +97,16 @@ export async function login(
 
   const { email, password } = validated.data;
 
+  // Rate limit: 10 attempts per email per 15 minutes
+  const allowed = await checkLoginRateLimit(email, "unknown");
+  if (!allowed) {
+    return { message: "Too many login attempts. Please try again in 15 minutes." };
+  }
+
   const user = await db.user.findUnique({ where: { email } });
 
   if (!user || !user.passwordHash) {
+    await recordFailedLogin(email, "unknown");
     return { message: "Invalid email or password." };
   }
 
@@ -108,8 +116,11 @@ export async function login(
 
   const passwordMatch = await compare(password, user.passwordHash);
   if (!passwordMatch) {
+    await recordFailedLogin(email, "unknown");
     return { message: "Invalid email or password." };
   }
+
+  await clearLoginAttempts(email);
 
   await createSession({
     userId: user.id,
