@@ -37,7 +37,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-emerald-700 rounded-lg flex items-center justify-center text-white text-xs font-black">SP</div>
             <span className="font-black text-stone-800 text-lg tracking-tight">
-              Safe<span className="text-emerald-700">Pay</span>
+              Vault<span className="text-emerald-700">lify</span>
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-stone-500">

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { decryptSession } from "@/lib/session";
+import { decryptSession } from "@/lib/session-edge";
 
 // Routes that require a valid session
 const PROTECTED = ["/dashboard", "/admin"];
