@@ -13,6 +13,8 @@ Vaultlify is a Nigerian escrow platform that holds payment in trust between a bu
 5. [Transaction Statuses](#5-transaction-statuses)
 6. [REST API — For Businesses](#6-rest-api--for-businesses)
 7. [Embeddable Widget — For Businesses](#7-embeddable-widget--for-businesses)
+   - [Marketplace / Platform mode widget flow](#marketplace--platform-mode-widget-flow)
+   - [Direct mode widget flow](#direct-mode-widget-flow)
 8. [Webhook Events](#8-webhook-events)
 9. [Fees](#9-fees)
 10. [Security Model](#10-security-model)
@@ -392,7 +394,158 @@ Validation errors include field-level details:
 
 ## 7. Embeddable Widget — For Businesses
 
-The widget lets your counterparty accept a transaction and track its status entirely inside an `<iframe>` embedded in your product — they never leave your site. This section walks through the complete flow from the first API call to a completed transaction.
+The widget lets your users accept a transaction and track its status entirely inside an `<iframe>` embedded in your product — they never leave your site.
+
+There are **two widget flows** depending on which API mode you used to create the transaction:
+
+| | **Direct mode** | **Marketplace / Platform mode** |
+|---|---|---|
+| Who calls the API? | You (as one of the parties) | You (as the platform orchestrator) |
+| Invite step needed? | Yes — call `/invite` to get the widget URL | No — widget URLs are returned immediately |
+| Widget URL format | `…/widget/:id?token=<jwt>` | `…/widget/:id` (no token) |
+| Accept form shown? | Yes, to the counterparty | No — both parties are already joined |
+| `platformId` set? | No | Yes — your user ID is stored as the orchestrator |
+
+---
+
+### Marketplace / Platform mode widget flow
+
+Use this flow when you called `POST /transactions` with `seller` and `buyer` objects. Both parties are already registered on the transaction — no invite or accept step is needed.
+
+---
+
+#### Step 1 — Create the transaction
+
+Your server calls `POST /api/v1/transactions` with both parties:
+
+```json
+{
+  "title": "Nike Air Force 1",
+  "amount": 85000,
+  "seller": { "name": "Tunde Bello",  "email": "tunde@seller.com", "phone": "+2348011111111" },
+  "buyer":  { "name": "Ngozi Eze",    "email": "ngozi@buyer.com" }
+}
+```
+
+The response comes back at `AWAITING_PAYMENT` with both widget URLs ready:
+
+```json
+{
+  "data": {
+    "id": "clx...",
+    "reference": "VLT-20260713-X9K2P",
+    "status": "AWAITING_PAYMENT",
+    "platformId": "usr_your-platform-user-id",
+    "sellerWidgetUrl": "https://vaultlify.com/widget/clx...",
+    "buyerWidgetUrl":  "https://vaultlify.com/widget/clx...",
+    "parties": [
+      { "role": "SELLER", "userId": "...", "isInitiator": true },
+      { "role": "BUYER",  "userId": "...", "isInitiator": false }
+    ]
+  }
+}
+```
+
+`platformId` is automatically set to your API key's user ID. Your platform is **not** a party — you are the orchestrator. Your registered webhooks receive every event for all transactions you orchestrate.
+
+---
+
+#### Step 2 — Embed both widget URLs
+
+Embed each URL for the correct user. The widget detects that the viewer is already a party and skips the accept form entirely — it shows the status card, parties list, timeline, and action buttons appropriate to their role.
+
+**On the seller's order page:**
+
+```html
+<iframe
+  src="https://vaultlify.com/widget/clx..."
+  width="480"
+  height="640"
+  style="border: none; border-radius: 16px;"
+  allow="payment"
+></iframe>
+```
+
+**On the buyer's order page:**
+
+```html
+<iframe
+  src="https://vaultlify.com/widget/clx..."
+  width="480"
+  height="640"
+  style="border: none; border-radius: 16px;"
+  allow="payment"
+></iframe>
+```
+
+> **Note:** `sellerWidgetUrl` and `buyerWidgetUrl` currently resolve to the same URL (`/widget/:id` with no token). The widget determines what to show based on the viewer's session cookie. Embed the same URL for both — each party will see their own role-appropriate view.
+
+---
+
+#### Step 3 — What the widget shows
+
+Because both parties are already registered, the widget skips the accept form and renders immediately:
+
+| Viewer | Widget shows |
+|---|---|
+| Seller (logged in) | Status card, parties, timeline, **"Mark as Delivered"** button once funded |
+| Buyer (logged in) | Status card, parties, timeline, **"Confirm Receipt"** button once delivered |
+| Either party (not logged in) | Locked — "Sign in to view this transaction" prompt |
+
+The seller and buyer received an email at transaction creation with a link to set their password. Once claimed, they stay logged in via cookie and will see the widget with their correct role automatically.
+
+---
+
+#### Step 4 — postMessage events
+
+The widget fires the same `postMessage` events regardless of mode. Because there is no accept step, `vaultlify:accepted` and `vaultlify:formReady` are never fired — the transaction is already at `AWAITING_PAYMENT`. Listen for the remaining events:
+
+```js
+window.addEventListener("message", (event) => {
+  const { type, transactionId, status } = event.data;
+
+  switch (type) {
+    case "vaultlify:ready":
+      // Widget rendered — status will be "AWAITING_PAYMENT"
+      break;
+
+    case "vaultlify:delivered":
+      // Seller marked as delivered
+      break;
+
+    case "vaultlify:completed":
+      // Buyer confirmed receipt — release any platform-side holds
+      break;
+
+    case "vaultlify:cancelled":
+      // Transaction was cancelled
+      break;
+  }
+});
+```
+
+> The `prefill` postMessage command and `vaultlify:formReady` / `vaultlify:accepted` events are **not applicable** in marketplace mode. Those are part of the guest accept flow that only exists in Direct mode.
+
+---
+
+#### Step 5 — Webhooks
+
+Your platform receives webhook events for every transaction where `platformId` equals your user ID, even though you are not listed as a party. Wire up your webhook endpoint (Settings → Webhooks) to track payment, delivery, and completion server-side — this is the reliable record regardless of whether either user ever opens the widget.
+
+```json
+{
+  "event": "transaction.completed",
+  "txnId": "clx...",
+  "data": { "transaction": { "id": "clx...", "status": "COMPLETED" } },
+  "timestamp": "2026-07-13T10:00:00.000Z"
+}
+```
+
+---
+
+### Direct mode widget flow
+
+Use this flow when you called `POST /transactions` with `role` — you are one of the parties and the counterparty still needs to accept.
 
 ---
 
