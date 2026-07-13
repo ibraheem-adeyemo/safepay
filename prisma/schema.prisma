@@ -192,6 +192,11 @@ model Transaction {
   adminNote String?
   expiresAt DateTime?
 
+  // Set when a platform (business API key holder) creates a transaction on behalf
+  // of two of their own users. The platform is NOT a TransactionParty but still
+  // receives webhooks and has its fee config applied.
+  platformId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

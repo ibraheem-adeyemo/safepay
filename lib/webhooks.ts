@@ -8,22 +8,55 @@ export async function dispatchWebhooks(
   payload: Record<string, unknown>
 ): Promise<void> {
   try {
-    const parties = await db.transactionParty.findMany({
-      where: { transactionId: txnId },
-      include: {
-        user: {
-          include: {
-            business: {
-              include: {
-                webhooks: { where: { isActive: true, events: { has: event } } },
+    // Collect webhooks from two sources:
+    // 1. Businesses that are direct parties to this transaction
+    // 2. The platform that orchestrated it (platformId), if any — marketplace mode
+    const [parties, transaction] = await Promise.all([
+      db.transactionParty.findMany({
+        where: { transactionId: txnId },
+        include: {
+          user: {
+            include: {
+              business: {
+                include: {
+                  webhooks: { where: { isActive: true, events: { has: event } } },
+                },
               },
             },
           },
         },
-      },
+      }),
+      db.transaction.findUnique({
+        where: { id: txnId },
+        select: { platformId: true },
+      }),
+    ]);
+
+    const partyWebhooks = parties.flatMap((p) => p.user.business?.webhooks ?? []);
+
+    let platformWebhooks: typeof partyWebhooks = [];
+    if (transaction?.platformId) {
+      const platform = await db.user.findUnique({
+        where: { id: transaction.platformId },
+        include: {
+          business: {
+            include: {
+              webhooks: { where: { isActive: true, events: { has: event } } },
+            },
+          },
+        },
+      });
+      platformWebhooks = platform?.business?.webhooks ?? [];
+    }
+
+    // Deduplicate by id in case the platform is also a party
+    const seen = new Set<string>();
+    const webhooks = [...partyWebhooks, ...platformWebhooks].filter((wh) => {
+      if (seen.has(wh.id)) return false;
+      seen.add(wh.id);
+      return true;
     });
 
-    const webhooks = parties.flatMap((p) => p.user.business?.webhooks ?? []);
     if (webhooks.length === 0) return;
 
     const body = JSON.stringify({

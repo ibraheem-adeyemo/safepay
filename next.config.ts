@@ -1,41 +1,44 @@
 import type { NextConfig } from "next";
 
-const securityHeaders = [
-  // Prevent MIME-type sniffing
+// Applied to every route
+const globalHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // Stop browsers leaking the full referrer to third-party sites
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Allow the widget iframe from any origin; block framing of all other pages
-  // (overridden per-route in middleware for /widget/*)
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  // Force HTTPS for 1 year (prod only; harmless on localhost)
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=31536000; includeSubDomains; preload",
-  },
-  // Permissions policy — disable unused browser features
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
-  },
-  // Content-Security-Policy
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // Next.js needs inline scripts for hydration chunks
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      // Inline styles are common in Tailwind / CSS-in-JS
+      // unsafe-eval is NOT needed by Next.js 16 in production
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
-      // Allow images from self + data URIs
       "img-src 'self' data: blob:",
-      // Fonts served from self
       "font-src 'self'",
-      // Server actions + API routes are same-origin
       "connect-src 'self'",
-      // Widget can be embedded anywhere; all other frames blocked
-      "frame-ancestors 'self' *",
-      // Never fall back to HTTP for any resource
+      // No site (including ourselves) may frame any page except /widget/*
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join("; "),
+  },
+];
+
+// Override for /widget/* — must be embeddable in any third-party iframe
+const widgetHeaders = [
+  // Drop DENY so widget pages can be framed
+  { key: "X-Frame-Options", value: "ALLOWALL" },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self'",
+      "connect-src 'self'",
+      // Widget explicitly allows framing from any origin
+      "frame-ancestors *",
       "upgrade-insecure-requests",
     ].join("; "),
   },
@@ -44,11 +47,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   async headers() {
     return [
-      {
-        // Apply security headers to every route
-        source: "/:path*",
-        headers: securityHeaders,
-      },
+      { source: "/:path*", headers: globalHeaders },
+      // Widget override — must come after global so same-key headers win
+      { source: "/widget/:path*", headers: widgetHeaders },
     ];
   },
 };

@@ -17,6 +17,7 @@ import {
 } from "@/lib/notifications";
 import { sendEmail, emailClaimAccount } from "@/lib/email";
 import { randomBytes } from "crypto";
+import { hashToken } from "@/lib/token";
 import { formatAmount } from "@/lib/transaction/helpers";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
@@ -221,7 +222,7 @@ export async function acceptTransactionAsGuest(
     const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
     await db.user.update({
       where: { id: counterparty.id },
-      data: { claimToken, claimTokenExp },
+      data: { claimToken: hashToken(claimToken), claimTokenExp },
     });
     const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
     await sendEmail({

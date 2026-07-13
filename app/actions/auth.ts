@@ -1,10 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { hash, compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
-import { checkLoginRateLimit, recordFailedLogin, clearLoginAttempts } from "@/lib/rate-limit";
+import {
+  checkLoginRateLimit,
+  recordFailedLogin,
+  clearLoginAttempts,
+  checkRegistrationRateLimit,
+  recordRegistrationAttempt,
+} from "@/lib/rate-limit";
 import {
   RegisterSchema,
   LoginSchema,
@@ -17,6 +24,15 @@ export async function register(
   _state: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+
+  const allowed = await checkRegistrationRateLimit(ip);
+  if (!allowed) {
+    return { message: "Too many accounts created from this network. Please try again later." };
+  }
+  await recordRegistrationAttempt(ip);
+
   const raw = {
     name: formData.get("name"),
     email: formData.get("email"),
