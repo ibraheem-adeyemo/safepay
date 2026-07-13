@@ -1,15 +1,9 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { AccountType } from "@prisma/client";
 import { db } from "@/lib/db";
-
-export type SessionPayload = {
-  userId: string;
-  accountType: AccountType;
-  name: string;
-  expiresAt: string;
-};
+import type { SessionPayload } from "@/lib/session-edge";
+export type { SessionPayload } from "@/lib/session-edge";
 
 const COOKIE_NAME = "vl_session";
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -39,20 +33,6 @@ export async function encryptSession(payload: SessionPayload): Promise<string> {
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(getEncodedKey());
-}
-
-/** Decodes a session token without any DB validation — for use in middleware only. */
-export async function decryptSession(
-  token: string
-): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, getEncodedKey(), {
-      algorithms: ["HS256"],
-    });
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
-  }
 }
 
 export async function createSession(payload: Omit<SessionPayload, "expiresAt">) {
