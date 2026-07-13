@@ -8,6 +8,7 @@ import { notifyParties, notifyCounterpartyJoined, notifyYouJoined } from "@/lib/
 import { dispatchWebhooks } from "@/lib/webhooks";
 import { sendEmail, emailClaimAccount } from "@/lib/email";
 import { randomBytes } from "crypto";
+import { hashToken } from "@/lib/token";
 import type { PartyRole } from "@prisma/client";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
@@ -139,12 +140,12 @@ export async function widgetAcceptAsGuest(
     const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
     await db.user.update({
       where: { id: counterparty.id },
-      data: { claimToken, claimTokenExp },
+      data: { claimToken: hashToken(claimToken), claimTokenExp },
     });
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
     await sendEmail({
       to: email,
-      subject: "Secure your SafePay account",
+      subject: "Secure your Vaultlify account",
       html: emailClaimAccount(name, `${base}/claim?token=${claimToken}`),
     });
   }

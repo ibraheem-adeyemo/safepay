@@ -8,6 +8,12 @@ import { db } from "@/lib/db";
 import { getSession, createSession } from "@/lib/session";
 import { notifyUser } from "@/lib/notifications";
 import { sendEmail, emailPasswordReset } from "@/lib/email";
+import { isSafeWebhookUrl } from "@/lib/ssrf";
+import { hashToken } from "@/lib/token";
+import {
+  checkPasswordResetRateLimit,
+  recordPasswordResetAttempt,
+} from "@/lib/rate-limit";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string; success?: boolean } | undefined;
 
@@ -29,7 +35,7 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
   if (token) {
     // Token-based path: user clicked the email link on a device with no session
     const found = await db.user.findFirst({
-      where: { claimToken: token },
+      where: { claimToken: hashToken(token) },
       select: { id: true, accountType: true, name: true, isClaimed: true, claimTokenExp: true },
     });
     if (!found || found.isClaimed) return { message: "This link is invalid or has already been used." };
@@ -76,7 +82,7 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
     user.id,
     "ACCOUNT_CLAIMED",
     "Account secured",
-    "Your SafePay account is now fully set up. Welcome to SafePay!"
+    "Your Vaultlify account is now fully set up. Welcome to Vaultlify!"
   );
 
   redirect("/dashboard?claimed=1");
@@ -162,7 +168,7 @@ export async function changePassword(_state: ActionState, formData: FormData): P
   if (!valid) return { errors: { currentPassword: ["Incorrect password."] } };
 
   const passwordHash = await hash(newPassword, 12);
-  await db.user.update({ where: { id: session.userId }, data: { passwordHash } });
+  await db.user.update({ where: { id: session.userId }, data: { passwordHash, passwordChangedAt: new Date() } });
 
   return { success: true, message: "Password updated successfully." };
 }
@@ -229,9 +235,9 @@ export async function generateApiKey(_state: ActionState, formData: FormData): P
 
   const { label } = validated.data;
 
-  // Generate key: sp_live_<32 random hex chars>
-  const rawKey = `sp_live_${randomBytes(16).toString("hex")}`;
-  const prefix = rawKey.slice(0, 15); // "sp_live_xxxxxxx" visible in UI
+  // Generate key: vl_live_<32 random hex chars>
+  const rawKey = `vl_live_${randomBytes(16).toString("hex")}`;
+  const prefix = rawKey.slice(0, 15); // "vl_live_xxxxxxx" visible in UI
   const keyHash = await hash(rawKey, 10);
 
   await db.apiKey.create({
@@ -293,6 +299,11 @@ export async function addWebhook(_state: ActionState, formData: FormData): Promi
   if (!validated.success) return { errors: z.flattenError(validated.error).fieldErrors };
 
   const { url, events } = validated.data;
+
+  if (!isSafeWebhookUrl(url)) {
+    return { errors: { url: ["Webhook URL must point to a public internet host."] } };
+  }
+
   const validEvents = events.filter((e) => VALID_EVENTS.includes(e));
 
   const secret = randomBytes(24).toString("hex");
@@ -328,6 +339,12 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
   const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
   if (!email) return { errors: { email: ["Enter your email address."] } };
 
+  const allowed = await checkPasswordResetRateLimit(email);
+  if (!allowed) {
+    return { success: true, message: "If that email has an account, a reset link is on its way." };
+  }
+  await recordPasswordResetAttempt(email);
+
   const user = await db.user.findUnique({ where: { email }, select: { id: true, name: true, isClaimed: true } });
 
   // Always return success to avoid leaking whether the email exists
@@ -340,13 +357,13 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
 
   await db.user.update({
     where: { id: user.id },
-    data: { claimToken: resetToken, claimTokenExp: resetTokenExp },
+    data: { resetToken: hashToken(resetToken), resetTokenExp },
   });
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
   await sendEmail({
     to: email,
-    subject: "Reset your SafePay password",
+    subject: "Reset your Vaultlify password",
     html: emailPasswordReset(user.name, `${base}/claim/reset?token=${resetToken}`),
   });
 
@@ -368,12 +385,12 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
   if (!token) return { message: "Invalid or missing reset token." };
 
   const user = await db.user.findFirst({
-    where: { claimToken: token },
-    select: { id: true, accountType: true, name: true, claimTokenExp: true },
+    where: { resetToken: hashToken(token) },
+    select: { id: true, accountType: true, name: true, resetTokenExp: true },
   });
 
   if (!user) return { message: "This reset link is invalid or has already been used." };
-  if (!user.claimTokenExp || user.claimTokenExp < new Date()) {
+  if (!user.resetTokenExp || user.resetTokenExp < new Date()) {
     return { message: "This reset link has expired. Please request a new one." };
   }
 
@@ -389,7 +406,7 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
 
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash, isClaimed: true, claimToken: null, claimTokenExp: null },
+    data: { passwordHash, isClaimed: true, resetToken: null, resetTokenExp: null, passwordChangedAt: new Date() },
   });
 
   await createSession({

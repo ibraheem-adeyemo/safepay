@@ -161,7 +161,7 @@ export async function notifyTransactionCreated(
     if (user?.email) {
       await sendEmail({
         to: user.email,
-        subject: "Your SafePay escrow is ready",
+        subject: "Your Vaultlify escrow is ready",
         html: emailTransactionCreated(user.name, title, amount, txnId),
       });
     }

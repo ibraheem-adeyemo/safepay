@@ -98,7 +98,7 @@ export default function AcceptForm({
       </button>
 
       <p className="text-center text-xs text-stone-400">
-        By accepting, a SafePay account will be created for you so we can
+        By accepting, a Vaultlify account will be created for you so we can
         protect this transaction. No spam.
       </p>
     </form>

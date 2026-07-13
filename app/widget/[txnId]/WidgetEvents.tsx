@@ -12,15 +12,15 @@ export function WidgetEvents({
   joined: boolean;
 }) {
   useEffect(() => {
-    window.parent.postMessage({ type: "safepay:ready", transactionId, status }, "*");
+    window.parent.postMessage({ type: "vaultlify:ready", transactionId, status }, "*");
     if (joined) {
-      window.parent.postMessage({ type: "safepay:accepted", transactionId, status }, "*");
+      window.parent.postMessage({ type: "vaultlify:accepted", transactionId, status }, "*");
     }
     if (status === "COMPLETED") {
-      window.parent.postMessage({ type: "safepay:completed", transactionId }, "*");
+      window.parent.postMessage({ type: "vaultlify:completed", transactionId }, "*");
     }
     if (status === "CANCELLED") {
-      window.parent.postMessage({ type: "safepay:cancelled", transactionId }, "*");
+      window.parent.postMessage({ type: "vaultlify:cancelled", transactionId }, "*");
     }
   }, [transactionId, status, joined]);
 

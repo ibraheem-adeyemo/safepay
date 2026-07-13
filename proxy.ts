@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { decryptSession } from "@/lib/session";
+import { decryptSession } from "@/lib/session-edge";
 
 // Routes that require a valid session
 const PROTECTED = ["/dashboard", "/admin"];
@@ -11,7 +11,7 @@ const ADMIN_ROUTES = ["/admin"];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const token = request.cookies.get("sp_session")?.value;
+  const token = request.cookies.get("vl_session")?.value;
   const session = token ? await decryptSession(token) : null;
 
   const isAuthed = !!session;

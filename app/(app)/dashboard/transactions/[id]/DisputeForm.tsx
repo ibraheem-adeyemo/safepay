@@ -71,7 +71,7 @@ export default function DisputeForm({ txnId }: { txnId: string }) {
         </div>
 
         <p className="text-xs text-stone-500">
-          A SafePay admin will review this dispute and contact both parties. The transaction will
+          A Vaultlify admin will review this dispute and contact both parties. The transaction will
           be frozen until resolved.
         </p>
 

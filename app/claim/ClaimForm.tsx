@@ -16,7 +16,7 @@ export default function ClaimForm({ token }: { token?: string }) {
           </Link>
           <h1 className="text-xl font-bold text-stone-900 mt-6 mb-1">Secure your account</h1>
           <p className="text-stone-500 text-sm">
-            Set a password to fully claim your SafePay account and access your dashboard anytime.
+            Set a password to fully claim your Vaultlify account and access your dashboard anytime.
           </p>
         </div>
 

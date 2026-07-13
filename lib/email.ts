@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
-const FROM = process.env.EMAIL_FROM ?? "SafePay <notifications@safepay.ng>";
-const BASE = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+const FROM = process.env.EMAIL_FROM ?? "Vaultlify <notifications@vaultlify.com>";
+const BASE = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
 
 export function txnUrl(txnId: string) {
   return `${BASE}/dashboard/transactions/${txnId}`;
@@ -54,7 +54,7 @@ function layout(body: string) {
         <tr>
           <td style="padding:16px 32px 24px;border-top:1px solid #f5f5f4;text-align:center;">
             <p style="margin:0;font-size:11px;color:#a8a29e;line-height:1.5;">
-              SafePay Escrow · Protecting Nigerian transactions<br/>
+              Vaultlify Escrow · Protecting Nigerian transactions<br/>
               This is an automated message — please do not reply.
             </p>
           </td>
@@ -88,7 +88,7 @@ export function emailTransactionCreated(
 ) {
   return layout(`
     ${h2(`Your escrow is ready, ${firstName(name)}!`)}
-    ${p(`Your SafePay escrow for <strong>${title}</strong> has been created for ₦${amount}.`)}
+    ${p(`Your Vaultlify escrow for <strong>${esc(title)}</strong> has been created for ₦${esc(amount)}.`)}
     ${p(`Share the invite link with the other party to activate the deal.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -103,7 +103,7 @@ export function emailCounterpartyJoined(
 ) {
   return layout(`
     ${h2("Your counterparty has joined!")}
-    ${p(`Hi ${firstName(name)}, <strong>${counterpartyName}</strong> has joined your escrow for <strong>${title}</strong> as the ${role.toLowerCase()}. The deal is now active.`)}
+    ${p(`Hi ${firstName(name)}, <strong>${esc(counterpartyName)}</strong> has joined your escrow for <strong>${esc(title)}</strong> as the ${esc(role.toLowerCase())}. The deal is now active.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -117,8 +117,8 @@ export function emailYouJoined(
 ) {
   return layout(`
     ${h2("You've joined an escrow!")}
-    ${p(`Hi ${firstName(name)}, you've joined <strong>${title}</strong> as the <strong>${role.toLowerCase()}</strong> for ₦${amount}.`)}
-    ${p(`Your payment is protected by SafePay until the deal is complete.`)}
+    ${p(`Hi ${firstName(name)}, you've joined <strong>${esc(title)}</strong> as the <strong>${esc(role.toLowerCase())}</strong> for ₦${esc(amount)}.`)}
+    ${p(`Your payment is protected by Vaultlify until the deal is complete.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -131,7 +131,7 @@ export function emailPaymentConfirmed(
 ) {
   return layout(`
     ${h2("Payment confirmed — escrow funded ✅")}
-    ${p(`Hi ${firstName(name)}, the payment of ₦${amount} for <strong>${title}</strong> has been confirmed and secured in escrow.`)}
+    ${p(`Hi ${firstName(name)}, the payment of ₦${esc(amount)} for <strong>${esc(title)}</strong> has been confirmed and secured in escrow.`)}
     ${p(`The seller can now proceed with delivery.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -144,7 +144,7 @@ export function emailItemDelivered(
 ) {
   return layout(`
     ${h2("Item marked as delivered 📦")}
-    ${p(`Hi ${firstName(name)}, the seller has marked <strong>${title}</strong> as delivered. Please review and confirm receipt to release the payment.`)}
+    ${p(`Hi ${firstName(name)}, the seller has marked <strong>${esc(title)}</strong> as delivered. Please review and confirm receipt to release the payment.`)}
     ${btn(txnUrl(txnId), "Confirm Receipt")}
   `);
 }
@@ -157,7 +157,7 @@ export function emailTransactionCompleted(
 ) {
   return layout(`
     ${h2("Transaction completed 🎉")}
-    ${p(`Hi ${firstName(name)}, the buyer has confirmed receipt of <strong>${title}</strong>. Payment of ₦${amount} will be released to you.`)}
+    ${p(`Hi ${firstName(name)}, the buyer has confirmed receipt of <strong>${esc(title)}</strong>. Payment of ₦${esc(amount)} will be released to you.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -169,7 +169,7 @@ export function emailDisputeRaised(
 ) {
   return layout(`
     ${h2("A dispute has been raised ⚠️")}
-    ${p(`Hi ${firstName(name)}, a dispute has been raised on <strong>${title}</strong>.`)}
+    ${p(`Hi ${firstName(name)}, a dispute has been raised on <strong>${esc(title)}</strong>.`)}
     ${p(`Our team will review the situation and reach out to both parties shortly.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
@@ -182,7 +182,7 @@ export function emailDisputeResolved(
 ) {
   return layout(`
     ${h2("Dispute resolved ✅")}
-    ${p(`Hi ${firstName(name)}, the dispute on <strong>${title}</strong> has been resolved by our team.`)}
+    ${p(`Hi ${firstName(name)}, the dispute on <strong>${esc(title)}</strong> has been resolved by our team.`)}
     ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
@@ -190,15 +190,15 @@ export function emailDisputeResolved(
 export function emailTransactionCancelled(name: string, title: string) {
   return layout(`
     ${h2("Transaction cancelled")}
-    ${p(`Hi ${firstName(name)}, the escrow for <strong>${title}</strong> has been cancelled. No funds have been taken.`)}
-    <p style="margin:24px 0 0;font-size:13px;color:#a8a29e;">If you have any questions, reply to this email or visit SafePay.</p>
+    ${p(`Hi ${firstName(name)}, the escrow for <strong>${esc(title)}</strong> has been cancelled. No funds have been taken.`)}
+    <p style="margin:24px 0 0;font-size:13px;color:#a8a29e;">If you have any questions, reply to this email or visit Vaultlify.</p>
   `);
 }
 
 export function emailClaimAccount(name: string, claimUrl: string) {
   return layout(`
-    ${h2("Secure your SafePay account")}
-    ${p(`Hi ${firstName(name)}, a SafePay account was created for you when you joined a transaction.`)}
+    ${h2("Secure your Vaultlify account")}
+    ${p(`Hi ${firstName(name)}, a Vaultlify account was created for you when you joined a transaction.`)}
     ${p(`Set a password now to access your full dashboard, track your escrows, and manage future transactions — all in one place.`)}
     <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 48 hours.</p>
     ${btn(claimUrl, "Set My Password")}
@@ -207,16 +207,26 @@ export function emailClaimAccount(name: string, claimUrl: string) {
 
 export function emailPasswordReset(name: string, resetUrl: string) {
   return layout(`
-    ${h2("Reset your SafePay password")}
-    ${p(`Hi ${firstName(name)}, we received a request to reset the password on your SafePay account.`)}
+    ${h2("Reset your Vaultlify password")}
+    ${p(`Hi ${firstName(name)}, we received a request to reset the password on your Vaultlify account.`)}
     ${p(`Click the button below to choose a new password. If you didn't request this, you can safely ignore this email.`)}
     <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 1 hour.</p>
     ${btn(resetUrl, "Reset My Password")}
   `);
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function firstName(name: string) {
-  return name.split(" ")[0];
+  return esc(name.split(" ")[0]);
+}
+
+// Escape user-controlled strings before embedding in HTML email bodies
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
 }

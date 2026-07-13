@@ -17,13 +17,13 @@ const FEATURES = [
   {
     icon: "⚡",
     title: "REST API",
-    desc: "Integrate SafePay escrow directly into your marketplace or product. Full API with API key auth, webhook events, and invite-link generation.",
+    desc: "Integrate Vaultlify escrow directly into your marketplace or product. Full API with API key auth, webhook events, and invite-link generation.",
     badge: "For developers",
   },
   {
     icon: "🔲",
     title: "Embeddable Widget",
-    desc: "Drop SafePay into your site with a single `<iframe>`. Your users never leave your product — the full escrow flow happens inside the widget.",
+    desc: "Drop Vaultlify into your site with a single `<iframe>`. Your users never leave your product — the full escrow flow happens inside the widget.",
     badge: "No-code embed",
   },
 ];
@@ -37,7 +37,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-emerald-700 rounded-lg flex items-center justify-center text-white text-xs font-black">SP</div>
             <span className="font-black text-stone-800 text-lg tracking-tight">
-              Safe<span className="text-emerald-700">Pay</span>
+              Vault<span className="text-emerald-700">lify</span>
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-stone-500">
@@ -71,7 +71,7 @@ export default function LandingPage() {
                 of Getting Scammed
               </h1>
               <p className="text-lg sm:text-xl text-emerald-200 leading-relaxed mb-10 max-w-2xl">
-                SafePay holds the buyer's money in a protected escrow until the seller delivers.
+                Vaultlify holds the buyer's money in a protected escrow until the seller delivers.
                 If the seller disappears, you get your money back.
                 No more delivering on a promise that vanishes.
               </p>
@@ -176,7 +176,7 @@ export default function LandingPage() {
               <p className="text-emerald-600 text-sm font-semibold tracking-widest uppercase mb-3">The Platform</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-4">Everything you need to transact safely</h2>
               <p className="text-stone-500 text-lg max-w-2xl mx-auto">
-                Use SafePay directly in the browser, integrate it via API, or embed it inside your own product.
+                Use Vaultlify directly in the browser, integrate it via API, or embed it inside your own product.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
@@ -202,7 +202,7 @@ export default function LandingPage() {
                   Add escrow to your product in an afternoon
                 </h2>
                 <p className="text-stone-600 text-lg leading-relaxed mb-8">
-                  Running a marketplace, classifieds platform, or freelance site? SafePay gives you a production-ready escrow layer without building the compliance, banking relationships, or dispute infrastructure yourself.
+                  Running a marketplace, classifieds platform, or freelance site? Vaultlify gives you a production-ready escrow layer without building the compliance, banking relationships, or dispute infrastructure yourself.
                 </p>
                 <div className="space-y-5 mb-8">
                   {[
@@ -224,7 +224,7 @@ export default function LandingPage() {
                   <Link href="/register" className="inline-block bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors">
                     Create a Business Account →
                   </Link>
-                  <a href="mailto:hello@safepay.ng" className="inline-block border border-stone-300 hover:border-stone-400 text-stone-700 font-semibold px-6 py-3 rounded-xl text-sm transition-colors">
+                  <a href="mailto:hello@vaultlify.com" className="inline-block border border-stone-300 hover:border-stone-400 text-stone-700 font-semibold px-6 py-3 rounded-xl text-sm transition-colors">
                     Contact Sales
                   </a>
                 </div>
@@ -241,7 +241,7 @@ export default function LandingPage() {
                 <pre className="px-5 py-5 text-xs font-mono leading-relaxed overflow-x-auto">
                   <code className="text-stone-300">{`// 1. Create the escrow
 const txn = await fetch(
-  "https://safepay.ng/api/v1/transactions",
+  "https://vaultlify.com/api/v1/transactions",
   {
     method: "POST",
     headers: {
@@ -258,7 +258,7 @@ const txn = await fetch(
 
 // 2. Generate the buyer's invite link
 const invite = await fetch(
-  \`https://safepay.ng/api/v1/transactions/\${txn.data.id}/invite\`,
+  \`https://vaultlify.com/api/v1/transactions/\${txn.data.id}/invite\`,
   {
     method: "POST",
     headers: { Authorization: \`Bearer \${API_KEY}\` },
@@ -267,7 +267,7 @@ const invite = await fetch(
 ).then((r) => r.json());
 
 console.log(invite.data.shareUrl);
-// → https://safepay.ng/t/clx...?token=...`}</code>
+// → https://vaultlify.com/t/clx...?token=...`}</code>
                 </pre>
               </div>
             </div>
@@ -278,7 +278,7 @@ console.log(invite.data.shareUrl);
         <section className="py-20 sm:py-28 bg-stone-50">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-16">
-              <p className="text-emerald-600 text-sm font-semibold tracking-widest uppercase mb-3">Why Trust SafePay</p>
+              <p className="text-emerald-600 text-sm font-semibold tracking-widest uppercase mb-3">Why Trust Vaultlify</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-4">"How do I know you won't disappear with my money?"</h2>
               <p className="text-stone-500 text-lg max-w-2xl mx-auto">
                 We expected that question. Here's exactly why we can't run off with your funds even if we wanted to.
@@ -365,14 +365,14 @@ console.log(invite.data.shareUrl);
               <div>
                 <p className="text-white font-semibold text-sm mb-3">Company</p>
                 <div className="space-y-2 text-sm">
-                  <div><a href="mailto:hello@safepay.ng" className="hover:text-white transition-colors">hello@safepay.ng</a></div>
+                  <div><a href="mailto:hello@vaultlify.com" className="hover:text-white transition-colors">hello@vaultlify.com</a></div>
                   <div><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></div>
                   <div><a href="#" className="hover:text-white transition-colors">Terms of Service</a></div>
                 </div>
               </div>
             </div>
             <div className="border-t border-stone-800 pt-8 text-center text-xs text-stone-600">
-              <p>© {new Date().getFullYear()} SafePay Technologies Ltd. All rights reserved. Funds held in regulated escrow accounts.</p>
+              <p>© {new Date().getFullYear()} Vaultlify Technologies Ltd. All rights reserved. Funds held in regulated escrow accounts.</p>
             </div>
           </div>
         </footer>

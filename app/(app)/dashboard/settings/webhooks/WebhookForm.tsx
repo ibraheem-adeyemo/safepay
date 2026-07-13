@@ -42,7 +42,7 @@ export default function WebhookForm() {
         <input
           name="url"
           type="url"
-          placeholder="https://your-server.com/webhooks/safepay"
+          placeholder="https://your-server.com/webhooks/vaultlify"
           className={`w-full px-4 py-3 rounded-xl border text-stone-800 placeholder:text-stone-400 text-sm font-mono outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
             state?.errors?.url ? "border-red-400 bg-red-50" : "border-stone-200 bg-stone-50"
           }`}

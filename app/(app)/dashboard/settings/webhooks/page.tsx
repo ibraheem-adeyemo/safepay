@@ -19,7 +19,7 @@ export default async function WebhooksPage() {
       <div className="bg-white rounded-2xl border border-stone-200 px-6 py-6">
         <h2 className="text-base font-bold text-stone-900 mb-1">Webhooks</h2>
         <p className="text-stone-400 text-xs mb-1">
-          SafePay will POST a signed JSON payload to your URL when selected events occur.
+          Vaultlify will POST a signed JSON payload to your URL when selected events occur.
         </p>
         {!business && (
           <p className="text-amber-600 text-xs font-semibold mb-4">

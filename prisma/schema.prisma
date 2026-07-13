@@ -100,6 +100,13 @@ model User {
   claimToken    String?   @unique
   claimTokenExp DateTime?
 
+  // Separate token for password-reset flow (keeps claim and reset paths independent)
+  resetToken    String?   @unique
+  resetTokenExp DateTime?
+
+  // Set on every password change; sessions issued before this timestamp are rejected
+  passwordChangedAt DateTime?
+
   // Origin tracing — populated for external channel accounts
   channel        Channel @default(WEB)
   platformUrl    String?
@@ -138,17 +145,30 @@ model Business {
 model ApiKey {
   id     String  @id @default(cuid())
   userId String
-  // First 12 chars of the key shown in UI (e.g. "sp_live_xxxx")
+  // First 15 chars of the key shown in UI (e.g. "sp_live_xxxxxxx")
   prefix String
   // Full key stored as bcrypt hash — never stored in plaintext
-  keyHash    String   @unique
+  keyHash    String    @unique
   label      String?
-  isActive   Boolean  @default(true)
+  isActive   Boolean   @default(true)
   lastUsedAt DateTime?
+  expiresAt  DateTime?
 
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Login Rate Limiting ──────────────────────────────────────────────────────
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String   // email address being attempted
+  ip         String   @default("unknown")
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+  @@index([ip, createdAt])
 }
 
 // ─── Escrow Transactions ──────────────────────────────────────────────────────
@@ -171,6 +191,11 @@ model Transaction {
 
   adminNote String?
   expiresAt DateTime?
+
+  // Set when a platform (business API key holder) creates a transaction on behalf
+  // of two of their own users. The platform is NOT a TransactionParty but still
+  // receives webhooks and has its fee config applied.
+  platformId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
