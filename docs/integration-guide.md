@@ -190,7 +190,11 @@ POST /transactions
 Content-Type: application/json
 ```
 
-Body:
+There are two modes depending on whether your platform is one of the parties or an orchestrator acting on behalf of two of your own users.
+
+---
+
+**Direct mode** — you are one of the parties (e.g. you are the seller)
 
 ```json
 {
@@ -208,13 +212,13 @@ Body:
 | `amount` | Yes | Amount in naira (minimum 500) |
 | `role` | Yes | `"BUYER"` or `"SELLER"` — your role in this deal |
 
-Response `201`:
+Response `201` — transaction starts at `CREATED`. You then call `POST /transactions/:id/invite` to get the counterparty's invite link.
 
 ```json
 {
   "data": {
     "id": "clx...",
-    "reference": "SPY-20260512-A3K2P",
+    "reference": "SPY-20260713-A3K2P",
     "title": "MacBook Pro 14\" M3",
     "amount": "950000.00",
     "status": "CREATED",
@@ -227,13 +231,69 @@ Response `201`:
 
 ---
 
+**Marketplace mode** — your platform orchestrates a deal between two of your own users
+
+Use this when you are a marketplace (e.g. Jumia, Jiji) and the buyer and seller are both your users — not your platform itself. Pass both parties upfront; no invite step is needed.
+
+```json
+{
+  "title": "iPhone 15 Pro",
+  "description": "256GB, Black Titanium",
+  "amount": 950000,
+  "seller": { "name": "Emeka Okonkwo", "email": "emeka@gmail.com", "phone": "+2348012345678" },
+  "buyer":  { "name": "Amaka Okafor",  "email": "amaka@gmail.com" }
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `title` | Yes | What is being bought or sold (2–200 chars) |
+| `description` | No | Additional detail (max 500 chars) |
+| `amount` | Yes | Amount in naira (minimum 500) |
+| `seller` | Yes | Seller identity — `name` (required), `email` (required), `phone` (optional) |
+| `buyer` | Yes | Buyer identity — same fields as `seller` |
+
+SafePay automatically:
+- Creates shadow accounts for the seller and buyer if they don't already exist
+- Sends both a 48-hour link to set a password and access their SafePay dashboard
+- Records your platform as the orchestrator — you are **not** a party to the transaction
+- Applies your platform's custom fee configuration
+
+Response `201` — transaction starts immediately at `AWAITING_PAYMENT` (both parties are already in):
+
+```json
+{
+  "data": {
+    "id": "clx...",
+    "reference": "SPY-20260713-X9K2P",
+    "title": "iPhone 15 Pro",
+    "amount": "950000.00",
+    "status": "AWAITING_PAYMENT",
+    "currency": "NGN",
+    "feeAmount": "9500.00",
+    "parties": [
+      { "role": "SELLER", "userId": "...", "isInitiator": true },
+      { "role": "BUYER",  "userId": "...", "isInitiator": false }
+    ],
+    "sellerWidgetUrl": "https://safepay.ng/widget/clx...",
+    "buyerWidgetUrl":  "https://safepay.ng/widget/clx..."
+  }
+}
+```
+
+Embed `buyerWidgetUrl` in your product page so the buyer can track the escrow and confirm receipt without leaving your site. Embed `sellerWidgetUrl` on the seller's order page so they can mark delivery. No invite token is needed — both parties are already registered on the transaction.
+
+Your platform's registered webhooks receive every event for all transactions you orchestrate, even though you are not listed as a party.
+
+---
+
 #### Get a transaction
 
 ```
 GET /transactions/:id
 ```
 
-Returns the transaction with its full status log. Only returns transactions where the API key owner is a party.
+Returns the transaction with its full status log. Only returns transactions where the API key owner is a party or the platform orchestrator.
 
 ---
 
@@ -649,6 +709,32 @@ function verifyWebhook(rawBody, signature, secret) {
 
 Reject any request where the signature does not match.
 
+#### Replay protection
+
+Every webhook payload includes a `timestamp` field (ISO 8601). After verifying the signature, check that the timestamp is within 5 minutes of your server's current time. Reject anything older — this prevents an attacker who captured a legitimate payload from replaying it later.
+
+```js
+function verifyWebhook(rawBody, signature, secret) {
+  const payload = JSON.parse(rawBody);
+
+  // 1. Reject stale payloads
+  const age = Date.now() - new Date(payload.timestamp).getTime();
+  if (age > 5 * 60 * 1000) throw new Error("Webhook timestamp too old");
+
+  // 2. Verify signature
+  const expected = "sha256=" + crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+    throw new Error("Invalid webhook signature");
+  }
+
+  return payload;
+}
+```
+
 ---
 
 ## 9. Fees
@@ -719,14 +805,23 @@ SafePay sends transactional emails for every key event. No configuration is need
 - [ ] Wait for counterparty to join, then send payment per instructions on the transaction page
 - [ ] Confirm receipt once goods arrive
 
-### Business integrating via API
+### Business integrating via API (direct mode)
 
 - [ ] Register with account type **Business** and complete your business profile
 - [ ] Go to **Settings → API Keys** and generate a key — copy it now, it won't be shown again
-- [ ] `POST /api/v1/transactions` to create your first escrow
+- [ ] `POST /api/v1/transactions` with `role` to create your first escrow
 - [ ] `POST /api/v1/transactions/:id/invite` to get the counterparty's invite link
 - [ ] Optionally embed the `widgetUrl` in an iframe and listen for `postMessage` events
 - [ ] Go to **Settings → Webhooks**, add your endpoint URL, and verify signatures in your handler
+
+### Marketplace integrating via API (platform mode)
+
+- [ ] Register with account type **Business** and complete your business profile
+- [ ] Go to **Settings → API Keys** and generate a key
+- [ ] `POST /api/v1/transactions` with `seller` and `buyer` objects to create a transaction on behalf of your users
+- [ ] Embed `sellerWidgetUrl` on the seller's order page and `buyerWidgetUrl` on the buyer's order page
+- [ ] Go to **Settings → Webhooks**, add your endpoint URL — your platform receives all events for all orchestrated transactions
+- [ ] Optionally prefill the widget form using `postMessage` so users don't have to type their details again
 
 ---
 

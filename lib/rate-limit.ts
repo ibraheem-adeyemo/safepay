@@ -31,3 +31,37 @@ export async function recordFailedLogin(email: string, ip: string): Promise<void
 export async function clearLoginAttempts(email: string): Promise<void> {
   await db.loginAttempt.deleteMany({ where: { identifier: email } });
 }
+
+// ─── Password reset — 3 requests per email per hour ──────────────────────────
+
+const RESET_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_RESET_BY_EMAIL = 3;
+
+export async function checkPasswordResetRateLimit(email: string): Promise<boolean> {
+  const start = new Date(Date.now() - RESET_WINDOW_MS);
+  const count = await db.loginAttempt.count({
+    where: { identifier: `reset:${email}`, createdAt: { gte: start } },
+  });
+  return count < MAX_RESET_BY_EMAIL;
+}
+
+export async function recordPasswordResetAttempt(email: string): Promise<void> {
+  await db.loginAttempt.create({ data: { identifier: `reset:${email}`, ip: "unknown" } });
+}
+
+// ─── Registration — 10 accounts per IP per hour ───────────────────────────────
+
+const REGISTER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_REGISTER_BY_IP = 10;
+
+export async function checkRegistrationRateLimit(ip: string): Promise<boolean> {
+  const start = new Date(Date.now() - REGISTER_WINDOW_MS);
+  const count = await db.loginAttempt.count({
+    where: { identifier: `register:${ip}`, createdAt: { gte: start } },
+  });
+  return count < MAX_REGISTER_BY_IP;
+}
+
+export async function recordRegistrationAttempt(ip: string): Promise<void> {
+  await db.loginAttempt.create({ data: { identifier: `register:${ip}`, ip } });
+}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { logout } from "@/app/actions/auth";
 import { db } from "@/lib/db";
+import NotificationBell from "@/app/(app)/dashboard/NotificationBell";
 
 export default async function AppLayout({
   children,
@@ -49,14 +50,7 @@ export default async function AppLayout({
             <Link href="/dashboard/transactions" className="hover:text-stone-900 transition-colors">
               Transactions
             </Link>
-            <Link href="/dashboard/notifications" className="hover:text-stone-900 transition-colors relative">
-              Notifications
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-3 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </Link>
+            <NotificationBell initialCount={unreadCount} />
             <Link href="/dashboard/settings" className="hover:text-stone-900 transition-colors">
               Settings
             </Link>

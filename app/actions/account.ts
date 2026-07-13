@@ -9,6 +9,11 @@ import { getSession, createSession } from "@/lib/session";
 import { notifyUser } from "@/lib/notifications";
 import { sendEmail, emailPasswordReset } from "@/lib/email";
 import { isSafeWebhookUrl } from "@/lib/ssrf";
+import { hashToken } from "@/lib/token";
+import {
+  checkPasswordResetRateLimit,
+  recordPasswordResetAttempt,
+} from "@/lib/rate-limit";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string; success?: boolean } | undefined;
 
@@ -30,7 +35,7 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
   if (token) {
     // Token-based path: user clicked the email link on a device with no session
     const found = await db.user.findFirst({
-      where: { claimToken: token },
+      where: { claimToken: hashToken(token) },
       select: { id: true, accountType: true, name: true, isClaimed: true, claimTokenExp: true },
     });
     if (!found || found.isClaimed) return { message: "This link is invalid or has already been used." };
@@ -334,6 +339,12 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
   const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
   if (!email) return { errors: { email: ["Enter your email address."] } };
 
+  const allowed = await checkPasswordResetRateLimit(email);
+  if (!allowed) {
+    return { success: true, message: "If that email has an account, a reset link is on its way." };
+  }
+  await recordPasswordResetAttempt(email);
+
   const user = await db.user.findUnique({ where: { email }, select: { id: true, name: true, isClaimed: true } });
 
   // Always return success to avoid leaking whether the email exists
@@ -346,7 +357,7 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
 
   await db.user.update({
     where: { id: user.id },
-    data: { resetToken, resetTokenExp },
+    data: { resetToken: hashToken(resetToken), resetTokenExp },
   });
 
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
@@ -374,7 +385,7 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
   if (!token) return { message: "Invalid or missing reset token." };
 
   const user = await db.user.findFirst({
-    where: { resetToken: token },
+    where: { resetToken: hashToken(token) },
     select: { id: true, accountType: true, name: true, resetTokenExp: true },
   });
 
