@@ -9,12 +9,12 @@ function getEncodedKey() {
   return new TextEncoder().encode(secret);
 }
 
-// SPY-20260511-A3K2P
+// VLT-20260511-A3K2P
 export function generateReference(): string {
   const d = new Date();
   const date = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
   const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `SPY-${date}-${rand}`;
+  return `VLT-${date}-${rand}`;
 }
 
 export type InvitePrefill = { name?: string; email?: string; phone?: string };

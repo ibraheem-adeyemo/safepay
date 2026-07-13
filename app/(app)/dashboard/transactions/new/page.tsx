@@ -101,7 +101,7 @@ export default function NewTransactionPage() {
             </div>
             {feeEstimate && (
               <p className="text-xs text-stone-400 mt-1.5">
-                Estimated SafePay fee: <span className="font-semibold text-stone-600">₦{feeEstimate}</span> (1.5%)
+                Estimated Vaultlify fee: <span className="font-semibold text-stone-600">₦{feeEstimate}</span> (1.5%)
               </p>
             )}
             {state?.errors?.amount && (
@@ -156,7 +156,7 @@ export default function NewTransactionPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-emerald-700">{amount ? `₦${amount}` : "—"}</p>
-                  <p className="text-xs text-emerald-500">🛡 SafePay escrow</p>
+                  <p className="text-xs text-emerald-500">🛡 Vaultlify escrow</p>
                 </div>
               </div>
             </div>

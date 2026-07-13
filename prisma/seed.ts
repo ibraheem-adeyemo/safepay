@@ -31,7 +31,7 @@ async function main() {
   }
 
   // Super admin account
-  const adminEmail = "admin@safepay.ng";
+  const adminEmail = "admin@vaultlify.com";
   const adminPassword = "REMOVED_FROM_HISTORY";
 
   const existing = await db.user.findUnique({ where: { email: adminEmail } });
@@ -39,7 +39,7 @@ async function main() {
     const passwordHash = await hash(adminPassword, 12);
     await db.user.create({
       data: {
-        name: "SafePay Admin",
+        name: "Vaultlify Admin",
         email: adminEmail,
         passwordHash,
         accountType: "SUPER_ADMIN",

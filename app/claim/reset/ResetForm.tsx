@@ -142,7 +142,7 @@ export default function ResetForm({ token, emailHint }: { token?: string; emailH
           </h1>
           <p className="text-stone-500 text-sm">
             {token
-              ? "Choose a new password for your SafePay account."
+              ? "Choose a new password for your Vaultlify account."
               : "Enter your email and we'll send you a reset link."}
           </p>
         </div>

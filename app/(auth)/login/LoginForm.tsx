@@ -15,7 +15,7 @@ export default function LoginForm() {
     <>
       {fromWidget && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-4">
-          You already have a SafePay account with this email. Sign in to accept the transaction.
+          You already have a Vaultlify account with this email. Sign in to accept the transaction.
         </div>
       )}
 

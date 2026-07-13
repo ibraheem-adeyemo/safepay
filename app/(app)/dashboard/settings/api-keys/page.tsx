@@ -20,7 +20,7 @@ export default async function ApiKeysPage() {
       <div className="bg-white rounded-2xl border border-stone-200 px-6 py-6">
         <h2 className="text-base font-bold text-stone-900 mb-1">API Keys</h2>
         <p className="text-stone-400 text-xs mb-5">
-          Use these keys to authenticate requests to the SafePay API. The full key is shown only once on creation — store it securely.
+          Use these keys to authenticate requests to the Vaultlify API. The full key is shown only once on creation — store it securely.
         </p>
         <ApiKeyForm />
       </div>

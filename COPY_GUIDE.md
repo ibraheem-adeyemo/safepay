@@ -1,4 +1,4 @@
-# SafePay — Landing Page Copy Guide
+# Vaultlify — Landing Page Copy Guide
 > All headline variants, CTA variants, and form copy ready to paste
 
 ---
@@ -21,7 +21,7 @@
 ## SUBHEADLINE VARIANTS
 
 **Option A**
-> SafePay holds the buyer's money securely until the seller delivers. Nobody gets scammed. Nobody gets ghosted. You both get exactly what was promised — or your money comes back.
+> Vaultlify holds the buyer's money securely until the seller delivers. Nobody gets scammed. Nobody gets ghosted. You both get exactly what was promised — or your money comes back.
 
 **Option B**
 > Create a transaction link in 2 minutes. The buyer pays into a safe. The seller delivers. Both sides confirm. Funds released. Simple.
@@ -86,7 +86,7 @@
 > "You're in, [First Name]!"
 
 **Body:**
-> We've reserved your early access spot. You'll be among the **first people** to use SafePay when we launch. We'll email you at **[email]** with everything you need.
+> We've reserved your early access spot. You'll be among the **first people** to use Vaultlify when we launch. We'll email you at **[email]** with everything you need.
 
 **Position Badge:**
 > 📌 Your position: #[number] on the waitlist
@@ -127,9 +127,9 @@
 > "A neutral third party that holds the money — until the deal is done."
 
 **Body:**
-> Think of SafePay as a trusted middleman that both the buyer and seller agree to. The buyer's money goes into a secure hold — and only gets released when both parties are happy.
+> Think of Vaultlify as a trusted middleman that both the buyer and seller agree to. The buyer's money goes into a secure hold — and only gets released when both parties are happy.
 >
-> No more trusting a stranger with your money. No more delivering goods on a prayer. SafePay makes both sides safe — at the same time.
+> No more trusting a stranger with your money. No more delivering goods on a prayer. Vaultlify makes both sides safe — at the same time.
 
 **Bullet Points:**
 - Works for physical goods, digital products & services
@@ -222,12 +222,12 @@ A: Yes. We operate under standard financial regulations for payment processing a
 
 ## META / SEO COPY
 
-**Page Title:** SafePay — Buy & Sell Online Without Getting Scammed
+**Page Title:** Vaultlify — Buy & Sell Online Without Getting Scammed
 
-**Meta Description:** SafePay holds payment securely until both sides are happy. No more scams on WhatsApp or Instagram. Join the early access waitlist — free.
+**Meta Description:** Vaultlify holds payment securely until both sides are happy. No more scams on WhatsApp or Instagram. Join the early access waitlist — free.
 
-**OG Title:** Stop Praying After You Pay. SafePay Protects Every Transaction.
+**OG Title:** Stop Praying After You Pay. Vaultlify Protects Every Transaction.
 
 ---
 
-*File generated for SafePay Fake MVP validation test. Adjust currency symbol and legal copy per target market.*
+*File generated for Vaultlify Fake MVP validation test. Adjust currency symbol and legal copy per target market.*

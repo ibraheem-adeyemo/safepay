@@ -91,7 +91,7 @@ export default async function TransactionDetailPage({
               <p className="text-white text-3xl font-black">₦{formatAmount(transaction.amount)}</p>
               {transaction.feeAmount && Number(transaction.feeAmount) > 0 && (
                 <p className="text-emerald-300 text-xs mt-0.5">
-                  + ₦{formatAmount(transaction.feeAmount)} SafePay fee
+                  + ₦{formatAmount(transaction.feeAmount)} Vaultlify fee
                 </p>
               )}
             </div>
@@ -159,7 +159,7 @@ export default async function TransactionDetailPage({
               Payment required
             </p>
             <p className="text-sm text-blue-700">
-              Transfer <strong>₦{formatAmount(transaction.amount)}</strong> to the SafePay escrow account.
+              Transfer <strong>₦{formatAmount(transaction.amount)}</strong> to the Vaultlify escrow account.
               Our team will confirm receipt and update the status.
             </p>
             <div className="mt-3 bg-white border border-blue-200 rounded-xl px-4 py-3 text-sm space-y-1">
@@ -167,7 +167,7 @@ export default async function TransactionDetailPage({
                 <span>Bank</span><span className="font-semibold">First Bank of Nigeria</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Account Name</span><span className="font-semibold">SafePay Escrow Ltd</span>
+                <span>Account Name</span><span className="font-semibold">Vaultlify Escrow Ltd</span>
               </div>
               <div className="flex justify-between text-stone-600">
                 <span>Account Number</span><span className="font-semibold font-mono">0123456789</span>

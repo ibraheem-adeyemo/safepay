@@ -92,14 +92,14 @@ export default async function WidgetPage({
           <div>
             <p className="font-bold text-emerald-800 text-sm">You've joined this transaction!</p>
             <p className="text-xs text-emerald-700 mt-0.5">
-              SafePay is holding the escrow. You'll be notified as it progresses.
+              Vaultlify is holding the escrow. You'll be notified as it progresses.
             </p>
           </div>
           {myParty && !myParty.user.isClaimed && (
             <div className="border-t border-emerald-200 pt-3 space-y-2">
               <p className="text-xs text-emerald-800">
                 <strong>Check your email</strong> — we sent a link to{" "}
-                <span className="font-mono">{myParty.user.email}</span> to set up your SafePay password.
+                <span className="font-mono">{myParty.user.email}</span> to set up your Vaultlify password.
               </p>
               <a
                 href="/claim"
@@ -107,7 +107,7 @@ export default async function WidgetPage({
                 rel="noopener noreferrer"
                 className="block w-full text-center bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
               >
-                Set up my SafePay account →
+                Set up my Vaultlify account →
               </a>
               <p className="text-xs text-emerald-600 text-center">
                 Opens in a new tab — your transaction stays open here.
@@ -206,7 +206,7 @@ export default async function WidgetPage({
                 <span>Bank</span><span className="font-semibold">First Bank of Nigeria</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Account</span><span className="font-semibold">SafePay Escrow Ltd</span>
+                <span>Account</span><span className="font-semibold">Vaultlify Escrow Ltd</span>
               </div>
               <div className="flex justify-between text-stone-600">
                 <span>Number</span><span className="font-bold font-mono">0123456789</span>

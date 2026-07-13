@@ -224,10 +224,10 @@ export async function acceptTransactionAsGuest(
       where: { id: counterparty.id },
       data: { claimToken: hashToken(claimToken), claimTokenExp },
     });
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
     await sendEmail({
       to: email,
-      subject: "Secure your SafePay account",
+      subject: "Secure your Vaultlify account",
       html: emailClaimAccount(name, `${base}/claim?token=${claimToken}`),
     });
   }

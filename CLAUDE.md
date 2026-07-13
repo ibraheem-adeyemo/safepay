@@ -30,7 +30,7 @@ app/
   (admin)/         # /admin/** — requires ADMIN or SUPER_ADMIN accountType
   widget/[txnId]/  # iframe embed; excluded from middleware; SameSite=None cookie
   t/[txnId]/       # direct share link (non-iframe counterparty flow)
-  api/v1/          # REST API authenticated by API key (Bearer sp_live_*)
+  api/v1/          # REST API authenticated by API key (Bearer vl_live_*)
   claim/           # password set for shadow accounts and password reset
 ```
 
@@ -41,7 +41,7 @@ The file exports `proxy` and `config`. It only decrypts the session JWT — no D
 ### Two acceptance flows — share link vs. widget
 
 `/t/[txnId]` and `/widget/[txnId]` serve the same escrow but through different UX:
-- `/t/` — counterparty opens a SafePay page in their own browser tab; standard cookie behaviour
+- `/t/` — counterparty opens a Vaultlify page in their own browser tab; standard cookie behaviour
 - `/widget/` — embedded in a third-party iframe; requires `SameSite=None; Secure` on the session cookie (set in `lib/session.ts` based on `NODE_ENV`)
 
 Both pages handle three viewer states: guest (no session, token present → show accept form), logged-in counterparty (one-click accept), and existing party (show status + action buttons).
@@ -69,9 +69,9 @@ Key schema relationships:
 
 ### Authentication — two systems
 
-**Session (web):** JWT signed with `SESSION_SECRET`, stored in an `HttpOnly` cookie named `sp_session`. `getSession()` in `lib/session.ts` verifies the signature and rejects tokens issued before `user.passwordChangedAt`. `decryptSession()` is a lightweight variant (no DB query) used only in middleware.
+**Session (web):** JWT signed with `SESSION_SECRET`, stored in an `HttpOnly` cookie named `vl_session`. `getSession()` in `lib/session.ts` verifies the signature and rejects tokens issued before `user.passwordChangedAt`. `decryptSession()` is a lightweight variant (no DB query) used only in middleware.
 
-**API key (REST):** `Bearer sp_live_*` tokens. `authenticateApiKey()` in `lib/api-auth.ts` does a prefix lookup (`apiKey.prefix`) to narrow to one candidate, then bcrypt-compares the full token against `apiKey.keyHash`. Returns `{ userId, keyId }`.
+**API key (REST):** `Bearer vl_live_*` tokens. `authenticateApiKey()` in `lib/api-auth.ts` does a prefix lookup (`apiKey.prefix`) to narrow to one candidate, then bcrypt-compares the full token against `apiKey.keyHash`. Returns `{ userId, keyId }`.
 
 ### Transaction fee resolution
 
@@ -93,7 +93,7 @@ When an unregistered user accepts an invite, a `User` row is created with `isCla
 
 **Direct mode** — API key holder passes `role` and becomes a `TransactionParty` as `isInitiator: true`. They then call `POST /transactions/:id/invite` to bring in the counterparty.
 
-**Marketplace (platform) mode** — API key holder passes `seller` and `buyer` objects. SafePay creates shadow accounts for both parties, records both as `TransactionParty`, and stores the API key holder's `userId` as `transaction.platformId`. The platform is **not** a party — they are the orchestrator. The transaction starts at `AWAITING_PAYMENT` immediately. Webhooks are routed to the platform's registered endpoints via `platformId`. Fee config is resolved from the platform's `Business.feeConfig`. See `app/api/v1/transactions/route.ts` — `handleMarketplace()` for the implementation.
+**Marketplace (platform) mode** — API key holder passes `seller` and `buyer` objects. Vaultlify creates shadow accounts for both parties, records both as `TransactionParty`, and stores the API key holder's `userId` as `transaction.platformId`. The platform is **not** a party — they are the orchestrator. The transaction starts at `AWAITING_PAYMENT` immediately. Webhooks are routed to the platform's registered endpoints via `platformId`. Fee config is resolved from the platform's `Business.feeConfig`. See `app/api/v1/transactions/route.ts` — `handleMarketplace()` for the implementation.
 
 ### Email
 

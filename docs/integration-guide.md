@@ -1,12 +1,12 @@
-# SafePay Integration & Onboarding Guide
+# Vaultlify Integration & Onboarding Guide
 
-SafePay is a Nigerian escrow platform that holds payment in trust between a buyer and a seller until both sides confirm the deal is done. No money moves until both parties agree — protecting buyers from fraud and giving sellers confidence they will be paid.
+Vaultlify is a Nigerian escrow platform that holds payment in trust between a buyer and a seller until both sides confirm the deal is done. No money moves until both parties agree — protecting buyers from fraud and giving sellers confidence they will be paid.
 
 ---
 
 ## Table of Contents
 
-1. [How SafePay Works](#1-how-safepay-works)
+1. [How Vaultlify Works](#1-how-vaultlify-works)
 2. [Account Types](#2-account-types)
 3. [Getting Started — Web Dashboard](#3-getting-started--web-dashboard)
 4. [The Escrow Flow Step by Step](#4-the-escrow-flow-step-by-step)
@@ -20,19 +20,19 @@ SafePay is a Nigerian escrow platform that holds payment in trust between a buye
 
 ---
 
-## 1. How SafePay Works
+## 1. How Vaultlify Works
 
 ```
 Initiator creates escrow  →  Counterparty accepts via invite link
        ↓
-Buyer sends payment  →  SafePay holds funds
+Buyer sends payment  →  Vaultlify holds funds
        ↓
 Seller delivers  →  Buyer confirms receipt
        ↓
-SafePay releases payment to seller
+Vaultlify releases payment to seller
 ```
 
-At any funded stage either party can raise a dispute. SafePay's team will review and decide the outcome.
+At any funded stage either party can raise a dispute. Vaultlify's team will review and decide the outcome.
 
 ---
 
@@ -41,7 +41,7 @@ At any funded stage either party can raise a dispute. SafePay's team will review
 | Type | Who it's for | What they can do |
 |---|---|---|
 | **Personal** | Individual buyers and sellers | Create transactions, accept invites, manage their escrows |
-| **Business** | Companies integrating SafePay | Everything above + API access, API keys, webhooks, custom fee config |
+| **Business** | Companies integrating Vaultlify | Everything above + API access, API keys, webhooks, custom fee config |
 | **Shadow** | Counterparties who have not registered | Accept invites via email/link without a prior account; prompted to set a password afterwards |
 
 Shadow accounts are created automatically when an unregistered counterparty accepts an invite. They receive an email with a link to set a password and claim their full account.
@@ -52,7 +52,7 @@ Shadow accounts are created automatically when an unregistered counterparty acce
 
 ### 3.1 Register
 
-Visit `https://safepay.ng/register`. Choose **Personal** or **Business** during sign-up.
+Visit `https://vaultlify.com/register`. Choose **Personal** or **Business** during sign-up.
 
 Business accounts get access to API keys, webhooks, and fee configuration under **Settings**.
 
@@ -63,28 +63,28 @@ Business accounts get access to API keys, webhooks, and fee configuration under 
    - **Title** — describe what is being bought or sold (e.g. "iPhone 15 Pro 256GB").
    - **Amount** — minimum ₦500.
    - **Your role** — are you the **Buyer** or the **Seller**?
-3. Click **Create**. SafePay creates the escrow and shows you an invite link.
+3. Click **Create**. Vaultlify creates the escrow and shows you an invite link.
 
 ### 3.3 Invite your counterparty
 
 Copy the invite link from the transaction page and send it to the other party (WhatsApp, email, SMS — any channel).
 
-When they open the link they will be asked to enter their name and email, then they join the transaction automatically. If they already have a SafePay account and are logged in, they join in one click.
+When they open the link they will be asked to enter their name and email, then they join the transaction automatically. If they already have a Vaultlify account and are logged in, they join in one click.
 
 ### 3.4 Payment
 
-Once both parties have joined, the transaction moves to **Awaiting Payment**. The buyer makes payment via bank transfer to SafePay's account (details provided on the transaction page). SafePay manually confirms receipt and moves the transaction to **Funded**.
+Once both parties have joined, the transaction moves to **Awaiting Payment**. The buyer makes payment via bank transfer to Vaultlify's account (details provided on the transaction page). Vaultlify manually confirms receipt and moves the transaction to **Funded**.
 
 ### 3.5 Delivery and confirmation
 
 1. The seller delivers the goods or service.
 2. The seller clicks **Mark as Delivered** on the transaction page.
 3. The buyer inspects and clicks **Confirm Receipt**.
-4. SafePay releases the payment to the seller. The transaction is **Completed**.
+4. Vaultlify releases the payment to the seller. The transaction is **Completed**.
 
 ### 3.6 Disputes
 
-If something goes wrong after the transaction is funded, either party can click **Raise a Dispute**. The transaction is paused, and SafePay's team will review and contact both parties. The outcome will be either **Completed** (payment released to seller) or **Refunded** (payment returned to buyer).
+If something goes wrong after the transaction is funded, either party can click **Raise a Dispute**. The transaction is paused, and Vaultlify's team will review and contact both parties. The outcome will be either **Completed** (payment released to seller) or **Refunded** (payment returned to buyer).
 
 ---
 
@@ -95,7 +95,7 @@ CREATED
   │  Counterparty accepts invite link
   ▼
 AWAITING_PAYMENT
-  │  Buyer sends bank transfer; SafePay confirms
+  │  Buyer sends bank transfer; Vaultlify confirms
   ▼
 FUNDED
   │  Seller marks as delivered
@@ -107,7 +107,7 @@ COMPLETED ✓
 
 At any point from FUNDED onwards either party can raise a dispute:
 FUNDED / IN_PROGRESS / DELIVERED / UNDER_INSPECTION → DISPUTED
-  │  SafePay resolves
+  │  Vaultlify resolves
   ▼
 COMPLETED or REFUNDED
 
@@ -128,7 +128,7 @@ From CREATED or AWAITING_PAYMENT either party can cancel:
 | `DELIVERED` | Seller has marked delivery; buyer must confirm |
 | `UNDER_INSPECTION` | Buyer is inspecting (optional intermediate state) |
 | `COMPLETED` | Buyer confirmed receipt; payment released to seller |
-| `DISPUTED` | A dispute is open; SafePay is reviewing |
+| `DISPUTED` | A dispute is open; Vaultlify is reviewing |
 | `REFUNDED` | Dispute resolved in buyer's favour; funds returned |
 | `CANCELLED` | Transaction cancelled before funding |
 
@@ -143,7 +143,7 @@ The REST API lets you create and manage escrow transactions programmatically —
 All API requests require a Bearer token in the `Authorization` header.
 
 ```
-Authorization: Bearer sp_live_<your-key>
+Authorization: Bearer vl_live_<your-key>
 ```
 
 Generate API keys from **Dashboard → Settings → API Keys**. A key is shown only once at creation — store it securely. You can create multiple keys with labels (e.g. "Production", "Staging").
@@ -153,7 +153,7 @@ Keys are hashed on the server — if you lose a key, deactivate it and generate 
 ### 6.2 Base URL
 
 ```
-https://safepay.ng/api/v1
+https://vaultlify.com/api/v1
 ```
 
 ### 6.3 Endpoints
@@ -218,7 +218,7 @@ Response `201` — transaction starts at `CREATED`. You then call `POST /transac
 {
   "data": {
     "id": "clx...",
-    "reference": "SPY-20260713-A3K2P",
+    "reference": "VLT-20260713-A3K2P",
     "title": "MacBook Pro 14\" M3",
     "amount": "950000.00",
     "status": "CREATED",
@@ -253,9 +253,9 @@ Use this when you are a marketplace (e.g. Jumia, Jiji) and the buyer and seller 
 | `seller` | Yes | Seller identity — `name` (required), `email` (required), `phone` (optional) |
 | `buyer` | Yes | Buyer identity — same fields as `seller` |
 
-SafePay automatically:
+Vaultlify automatically:
 - Creates shadow accounts for the seller and buyer if they don't already exist
-- Sends both a 48-hour link to set a password and access their SafePay dashboard
+- Sends both a 48-hour link to set a password and access their Vaultlify dashboard
 - Records your platform as the orchestrator — you are **not** a party to the transaction
 - Applies your platform's custom fee configuration
 
@@ -265,7 +265,7 @@ Response `201` — transaction starts immediately at `AWAITING_PAYMENT` (both pa
 {
   "data": {
     "id": "clx...",
-    "reference": "SPY-20260713-X9K2P",
+    "reference": "VLT-20260713-X9K2P",
     "title": "iPhone 15 Pro",
     "amount": "950000.00",
     "status": "AWAITING_PAYMENT",
@@ -275,8 +275,8 @@ Response `201` — transaction starts immediately at `AWAITING_PAYMENT` (both pa
       { "role": "SELLER", "userId": "...", "isInitiator": true },
       { "role": "BUYER",  "userId": "...", "isInitiator": false }
     ],
-    "sellerWidgetUrl": "https://safepay.ng/widget/clx...",
-    "buyerWidgetUrl":  "https://safepay.ng/widget/clx..."
+    "sellerWidgetUrl": "https://vaultlify.com/widget/clx...",
+    "buyerWidgetUrl":  "https://vaultlify.com/widget/clx..."
   }
 }
 ```
@@ -317,14 +317,14 @@ The `role` must be the counterparty's role (opposite of yours). Returns:
   "data": {
     "token": "<signed-jwt>",
     "role": "BUYER",
-    "widgetUrl": "https://safepay.ng/widget/clx...?token=<token>",
-    "shareUrl": "https://safepay.ng/t/clx...?token=<token>",
+    "widgetUrl": "https://vaultlify.com/widget/clx...?token=<token>",
+    "shareUrl": "https://vaultlify.com/t/clx...?token=<token>",
     "expiresIn": "7 days"
   }
 }
 ```
 
-- **`shareUrl`** — send this to your counterparty. They see SafePay's standard accept-and-join page.
+- **`shareUrl`** — send this to your counterparty. They see Vaultlify's standard accept-and-join page.
 - **`widgetUrl`** — embed this in an iframe inside your own product (see §7).
 
 Tokens expire in **7 days**. Call this endpoint again to generate a fresh token.
@@ -404,7 +404,7 @@ Your server calls `POST /api/v1/transactions` with your API key:
 { "title": "MacBook Air M3", "amount": 950000, "role": "SELLER" }
 ```
 
-SafePay creates the transaction in the database with status `CREATED`, records your account as the initiator (SELLER), and returns the transaction ID.
+Vaultlify creates the transaction in the database with status `CREATED`, records your account as the initiator (SELLER), and returns the transaction ID.
 
 ---
 
@@ -412,13 +412,13 @@ SafePay creates the transaction in the database with status `CREATED`, records y
 
 Your server calls `POST /api/v1/transactions/:id/invite` with `{ "role": "BUYER" }`.
 
-SafePay signs a JWT containing the transaction ID and the counterparty's role, then returns:
+Vaultlify signs a JWT containing the transaction ID and the counterparty's role, then returns:
 
 ```json
 {
   "token": "<signed-jwt>",
-  "widgetUrl": "https://safepay.ng/widget/clx...?token=<token>",
-  "shareUrl": "https://safepay.ng/t/clx...?token=<token>",
+  "widgetUrl": "https://vaultlify.com/widget/clx...?token=<token>",
+  "shareUrl": "https://vaultlify.com/t/clx...?token=<token>",
   "expiresIn": "7 days"
 }
 ```
@@ -433,7 +433,7 @@ Drop the `widgetUrl` into your page:
 
 ```html
 <iframe
-  src="https://safepay.ng/widget/clx...?token=<token>"
+  src="https://vaultlify.com/widget/clx...?token=<token>"
   width="480"
   height="640"
   style="border: none; border-radius: 16px;"
@@ -451,7 +451,7 @@ The counterparty sees the full escrow UI without ever leaving your site.
 
 1. Reads `token` and `joined` from the URL query string
 2. Fetches the full transaction from the database — including all parties and status logs
-3. Reads the visitor's session cookie (if they are already logged in to SafePay)
+3. Reads the visitor's session cookie (if they are already logged in to Vaultlify)
 4. Verifies the JWT token — checks the signature is valid and the `txnId` inside the token matches the URL
 5. Decides what to render based on who is viewing:
 
@@ -472,7 +472,7 @@ This triggers the `widgetAcceptAsGuest` server action, which is pre-bound to the
 
 1. Re-verifies the JWT invite token (guards against replays after the token has expired)
 2. Validates the form fields with Zod — rejects empty or malformed inputs
-3. Checks whether the email already belongs to a fully claimed SafePay account. If it does, redirects to `/login` with a callback URL pointing back to the widget so the logged-in user can accept in one click
+3. Checks whether the email already belongs to a fully claimed Vaultlify account. If it does, redirects to `/login` with a callback URL pointing back to the widget so the logged-in user can accept in one click
 4. Otherwise, finds or creates a **shadow account** (`isClaimed: false`) for the counterparty — a real database user record, but without a password yet
 5. If the shadow account already existed but was unclaimed, updates the name and phone from the form
 6. Creates a `TransactionParty` record linking the counterparty to the transaction as BUYER
@@ -497,8 +497,8 @@ The server component re-renders. This time:
 A small client component called `WidgetEvents` (invisible in the UI) runs a `useEffect` and fires two `postMessage` events to the parent page:
 
 ```js
-window.parent.postMessage({ type: "safepay:ready", transactionId, status }, "*");
-window.parent.postMessage({ type: "safepay:accepted", transactionId, status }, "*");
+window.parent.postMessage({ type: "vaultlify:ready", transactionId, status }, "*");
+window.parent.postMessage({ type: "vaultlify:accepted", transactionId, status }, "*");
 ```
 
 ---
@@ -512,36 +512,36 @@ The widget fires events outward AND listens for commands inward. Your page must 
 ```js
 window.addEventListener("message", (event) => {
   // Filter by message type — do NOT filter by origin.
-  // The widget is served from safepay.ng but your page may be on any domain,
+  // The widget is served from vaultlify.com but your page may be on any domain,
   // and origin-based filtering on the receiver side does nothing useful here.
   const { type, transactionId, status } = event.data;
 
   switch (type) {
-    case "safepay:ready":
+    case "vaultlify:ready":
       // Widget page rendered — `status` holds the current transaction status.
       // Use this to know the iframe is alive, but do NOT send prefill here —
       // React hasn't hydrated yet so the form listener isn't registered.
       break;
 
-    case "safepay:formReady":
+    case "vaultlify:formReady":
       // The accept form has mounted and its message listener is registered.
       // THIS is the correct moment to send prefill data (see below).
       sendPrefill();
       break;
 
-    case "safepay:accepted":
+    case "vaultlify:accepted":
       // Counterparty accepted — update your UI to "Awaiting payment"
       break;
 
-    case "safepay:delivered":
+    case "vaultlify:delivered":
       // Seller marked as delivered — prompt buyer to inspect
       break;
 
-    case "safepay:completed":
+    case "vaultlify:completed":
       // Buyer confirmed receipt — payment releasing to seller
       break;
 
-    case "safepay:cancelled":
+    case "vaultlify:cancelled":
       // Transaction was cancelled
       break;
   }
@@ -550,12 +550,12 @@ window.addEventListener("message", (event) => {
 
 #### Sending prefill data to the widget (postMessage path)
 
-**Critical:** send prefill only after receiving `safepay:formReady` — not on `iframe.onLoad`.
+**Critical:** send prefill only after receiving `vaultlify:formReady` — not on `iframe.onLoad`.
 
-`onLoad` fires when the initial HTML arrives, before React has hydrated and the form's event listener exists. Messages sent at that point are silently dropped. `safepay:formReady` is emitted by the form component itself, immediately after its listener is registered — so it is guaranteed to arrive after the listener is ready.
+`onLoad` fires when the initial HTML arrives, before React has hydrated and the form's event listener exists. Messages sent at that point are silently dropped. `vaultlify:formReady` is emitted by the form component itself, immediately after its listener is registered — so it is guaranteed to arrive after the listener is ready.
 
 ```js
-const iframe = document.getElementById("safepay-widget");
+const iframe = document.getElementById("vaultlify-widget");
 
 function sendPrefill() {
   iframe.contentWindow.postMessage(
@@ -567,12 +567,12 @@ function sendPrefill() {
         phone: "+2348012345678",
       },
     },
-    "https://safepay.ng" // targetOrigin — locks delivery to the SafePay iframe only
+    "https://vaultlify.com" // targetOrigin — locks delivery to the Vaultlify iframe only
   );
 }
 
 window.addEventListener("message", (event) => {
-  if (event.data?.type === "safepay:formReady") {
+  if (event.data?.type === "vaultlify:formReady") {
     sendPrefill();
   }
   // ... other event handlers
@@ -583,12 +583,12 @@ window.addEventListener("message", (event) => {
 
 | Event | Payload | When fired |
 |---|---|---|
-| `safepay:ready` | `{ transactionId, status }` | Widget page rendered (before React hydration) |
-| `safepay:formReady` | `{}` | Accept form mounted, ready to receive prefill |
-| `safepay:accepted` | `{ transactionId, status }` | Counterparty accepted the invite |
-| `safepay:delivered` | `{ transactionId }` | Seller clicked "Mark as Delivered" |
-| `safepay:completed` | `{ transactionId }` | Buyer clicked "Confirm Receipt" |
-| `safepay:cancelled` | `{ transactionId }` | Transaction cancelled |
+| `vaultlify:ready` | `{ transactionId, status }` | Widget page rendered (before React hydration) |
+| `vaultlify:formReady` | `{}` | Accept form mounted, ready to receive prefill |
+| `vaultlify:accepted` | `{ transactionId, status }` | Counterparty accepted the invite |
+| `vaultlify:delivered` | `{ transactionId }` | Seller clicked "Mark as Delivered" |
+| `vaultlify:completed` | `{ transactionId }` | Buyer clicked "Confirm Receipt" |
+| `vaultlify:cancelled` | `{ transactionId }` | Transaction cancelled |
 
 **postMessage command reference** — parent → widget:
 
@@ -596,7 +596,7 @@ window.addEventListener("message", (event) => {
 |---|---|---|
 | `prefill` | `{ data: { name?, email?, phone? } }` | Pre-fills form fields that are still empty |
 
-> **Note:** `safepay:formReady` is only emitted when the accept form is visible — i.e. a valid invite token is present and the counterparty slot is empty. If the widget is showing a transaction in progress (both parties already joined), the form never renders and `safepay:formReady` is never sent.
+> **Note:** `vaultlify:formReady` is only emitted when the accept form is visible — i.e. a valid invite token is present and the counterparty slot is empty. If the widget is showing a transaction in progress (both parties already joined), the form never renders and `vaultlify:formReady` is never sent.
 
 At this point you can update your own UI, mark the order as "pending payment" in your database, send your own notification, etc.
 
@@ -606,11 +606,11 @@ At this point you can update your own UI, mark the order as "pending payment" in
 
 From here every remaining step follows the same server-action → status-change → postMessage loop:
 
-| Step | Who acts | What happens in SafePay | Status transition | postMessage fired |
+| Step | Who acts | What happens in Vaultlify | Status transition | postMessage fired |
 |---|---|---|---|---|
-| **Payment** | Buyer sends bank transfer; SafePay admin confirms | `adminConfirmPayment` runs, writes a payment record | `AWAITING_PAYMENT` → `FUNDED` | — |
-| **Deliver** | Seller clicks "Mark as Delivered" inside the widget | `widgetMarkDelivered` runs, notifies buyer by email | `FUNDED` → `DELIVERED` | `safepay:delivered` |
-| **Confirm** | Buyer clicks "Confirm Receipt" inside the widget | `widgetConfirmReceipt` runs, notifies seller by email | `DELIVERED` → `COMPLETED` | `safepay:completed` |
+| **Payment** | Buyer sends bank transfer; Vaultlify admin confirms | `adminConfirmPayment` runs, writes a payment record | `AWAITING_PAYMENT` → `FUNDED` | — |
+| **Deliver** | Seller clicks "Mark as Delivered" inside the widget | `widgetMarkDelivered` runs, notifies buyer by email | `FUNDED` → `DELIVERED` | `vaultlify:delivered` |
+| **Confirm** | Buyer clicks "Confirm Receipt" inside the widget | `widgetConfirmReceipt` runs, notifies seller by email | `DELIVERED` → `COMPLETED` | `vaultlify:completed` |
 
 Each of these server actions also dispatches a webhook event to your registered endpoint — signed with HMAC-SHA256 — so your backend can react even if the user has closed the browser tab.
 
@@ -623,7 +623,7 @@ The widget uses two independent channels to keep your product informed:
 | Channel | Direction | Best for |
 |---|---|---|
 | `window.parent.postMessage` | Widget iframe → your page (in the browser) | Real-time UI updates — show a spinner, change a status badge, play a sound |
-| Webhooks (`X-SafePay-Signature`) | SafePay server → your server | Reliable backend updates — record the event in your database regardless of browser state |
+| Webhooks (`X-Vaultlify-Signature`) | Vaultlify server → your server | Reliable backend updates — record the event in your database regardless of browser state |
 
 Use both. The `postMessage` events update the user's screen immediately. The webhooks are the source of truth for your backend — they arrive even if the user closes the tab mid-flow.
 
@@ -631,13 +631,13 @@ Use both. The `postMessage` events update the user's screen immediately. The web
 
 ### Shadow accounts and claiming
 
-When a counterparty joins via the widget without an existing account, SafePay automatically:
+When a counterparty joins via the widget without an existing account, Vaultlify automatically:
 
 1. Creates a shadow account (`isClaimed: false`) — a real user record with no password
 2. Gives them a session cookie so they stay authenticated for the current browser session
 3. Emails them a 48-hour claim link (`/claim?token=...`) to set a password
 
-Once they claim their account they get full access to the SafePay dashboard — all past transactions, notifications, and settings. This is fully automatic; you do not need to handle any part of it.
+Once they claim their account they get full access to the Vaultlify dashboard — all past transactions, notifications, and settings. This is fully automatic; you do not need to handle any part of it.
 
 ---
 
@@ -683,10 +683,10 @@ Webhooks push real-time event notifications to your server. Configure them from 
 
 ### 8.4 Verifying the signature
 
-Every webhook request includes an `X-SafePay-Signature` header:
+Every webhook request includes an `X-Vaultlify-Signature` header:
 
 ```
-X-SafePay-Signature: sha256=<hmac-hex>
+X-Vaultlify-Signature: sha256=<hmac-hex>
 ```
 
 Verify it before processing:
@@ -739,10 +739,10 @@ function verifyWebhook(rawBody, signature, secret) {
 
 ## 9. Fees
 
-SafePay charges an escrow fee on each transaction. The fee is calculated at the time of transaction creation and held alongside the escrowed amount.
+Vaultlify charges an escrow fee on each transaction. The fee is calculated at the time of transaction creation and held alongside the escrowed amount.
 
 - **Default** — percentage-based fee applied to all transactions.
-- **Business override** — SafePay can configure a custom fee (fixed or percentage) or a zero-fee arrangement for specific business accounts. Contact support to discuss volume pricing.
+- **Business override** — Vaultlify can configure a custom fee (fixed or percentage) or a zero-fee arrangement for specific business accounts. Contact support to discuss volume pricing.
 
 The fee amount is returned in the transaction object as `feeAmount` (in naira). Buyers should factor this into the total amount they send.
 
@@ -752,8 +752,8 @@ The fee amount is returned in the transaction object as `feeAmount` (in naira). 
 
 ### API keys
 
-- Keys are stored as bcrypt hashes — SafePay never has access to your raw key.
-- Each key has a short prefix (e.g. `sp_live_abc1234`) stored in plaintext for fast lookup; the full key is only compared after that prefix match.
+- Keys are stored as bcrypt hashes — Vaultlify never has access to your raw key.
+- Each key has a short prefix (e.g. `vl_live_abc1234`) stored in plaintext for fast lookup; the full key is only compared after that prefix match.
 - Deactivate compromised keys immediately from the dashboard. Old keys cannot be recovered.
 
 ### Invite tokens
@@ -772,13 +772,13 @@ The fee amount is returned in the transaction object as `feeAmount` (in naira). 
 
 - Payloads are signed with HMAC-SHA256 using a per-webhook secret.
 - Always verify the signature before trusting the payload (see §8.4).
-- Webhook deliveries have a 5-second timeout. SafePay does not retry failed deliveries — build idempotent handlers and poll the API if you miss an event.
+- Webhook deliveries have a 5-second timeout. Vaultlify does not retry failed deliveries — build idempotent handlers and poll the API if you miss an event.
 
 ---
 
 ## 11. Email Notifications
 
-SafePay sends transactional emails for every key event. No configuration is needed — emails go to the address associated with each party's account.
+Vaultlify sends transactional emails for every key event. No configuration is needed — emails go to the address associated with each party's account.
 
 | Trigger | Who receives it |
 |---|---|
@@ -799,7 +799,7 @@ SafePay sends transactional emails for every key event. No configuration is need
 
 ### Personal user
 
-- [ ] Register at `https://safepay.ng/register`
+- [ ] Register at `https://vaultlify.com/register`
 - [ ] Create a transaction (Dashboard → Transactions → New)
 - [ ] Copy and send the invite link to the other party
 - [ ] Wait for counterparty to join, then send payment per instructions on the transaction page
@@ -825,4 +825,4 @@ SafePay sends transactional emails for every key event. No configuration is need
 
 ---
 
-*For support, contact the SafePay team or open an issue.*
+*For support, contact the Vaultlify team or open an issue.*
