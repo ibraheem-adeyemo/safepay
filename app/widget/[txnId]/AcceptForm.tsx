@@ -20,7 +20,7 @@ export default function WidgetAcceptForm({
   const [phone, setPhone] = useState(defaultValues.phone ?? "");
 
   // postMessage prefill: register listener first, then tell the parent we're ready.
-  // The parent must send prefill AFTER receiving safepay:formReady — not on iframe onLoad,
+  // The parent must send prefill AFTER receiving vaultlify:formReady — not on iframe onLoad,
   // because onLoad fires before React has hydrated and this listener exists.
   useEffect(() => {
     function handler(event: MessageEvent) {
@@ -32,7 +32,7 @@ export default function WidgetAcceptForm({
     }
     window.addEventListener("message", handler);
     // Signal to the parent that the form is mounted and ready to receive prefill.
-    window.parent.postMessage({ type: "safepay:formReady" }, "*");
+    window.parent.postMessage({ type: "vaultlify:formReady" }, "*");
     return () => window.removeEventListener("message", handler);
   }, []);
 
@@ -114,7 +114,7 @@ export default function WidgetAcceptForm({
       </button>
 
       <p className="text-center text-xs text-stone-400">
-        A SafePay account will be created for you — no spam.
+        A Vaultlify account will be created for you — no spam.
       </p>
     </form>
   );

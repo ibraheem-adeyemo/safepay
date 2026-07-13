@@ -181,7 +181,7 @@ async function handleMarketplace(body: unknown, platformUserId: string) {
   }
 
   const fee = await calculateFee(amount, platformUserId);
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
 
   // Find-or-create shadow accounts for both parties in parallel
   const [sellerUser, buyerUser] = await Promise.all([
@@ -319,7 +319,7 @@ async function sendClaimEmailIfNew(
     const userName = await db.user.findUnique({ where: { id: user.id }, select: { name: true } });
     await sendEmail({
       to: email,
-      subject: "You have been added to a SafePay escrow",
+      subject: "You have been added to a Vaultlify escrow",
       html: emailClaimAccount(userName?.name ?? "there", `${base}/claim?token=${claimToken}`),
     });
   } catch {

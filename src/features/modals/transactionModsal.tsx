@@ -257,7 +257,7 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
                   <div className="flex justify-between"><span className="text-stone-500">Item</span><span className="font-semibold text-stone-800">{tx.itemName}</span></div>
                   <div className="flex justify-between"><span className="text-stone-500">Amount</span><span className="font-bold text-emerald-700">₦{tx.dealAmount}</span></div>
                   <div className="flex justify-between"><span className="text-stone-500">Your role</span><span className="font-semibold text-stone-800">{tx.role}</span></div>
-                  <div className="flex justify-between"><span className="text-stone-500">Protection</span><span className="font-semibold text-emerald-600">🛡 SafePay Escrow</span></div>
+                  <div className="flex justify-between"><span className="text-stone-500">Protection</span><span className="font-semibold text-emerald-600">🛡 Vaultlify Escrow</span></div>
                 </div>
               </div>
  
@@ -378,7 +378,7 @@ export function TransactionModal({ isOpen, onClose }: { isOpen: boolean; onClose
               <div className="bg-stone-100 rounded-xl px-4 py-3 text-xs text-stone-500 mb-5">
                 📌 Waitlist position: <strong>#{TAKEN_SLOTS + 1}</strong>
               </div>
-              <p className="text-xs text-stone-400 mb-4">Know someone who buys or sells online? Share SafePay — referrals move you up the priority list.</p>
+              <p className="text-xs text-stone-400 mb-4">Know someone who buys or sells online? Share Vaultlify — referrals move you up the priority list.</p>
               <button onClick={onClose} className="text-sm text-stone-400 underline hover:text-stone-600 transition-colors">Close</button>
             </div>
           )}

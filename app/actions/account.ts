@@ -82,7 +82,7 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
     user.id,
     "ACCOUNT_CLAIMED",
     "Account secured",
-    "Your SafePay account is now fully set up. Welcome to SafePay!"
+    "Your Vaultlify account is now fully set up. Welcome to Vaultlify!"
   );
 
   redirect("/dashboard?claimed=1");
@@ -235,9 +235,9 @@ export async function generateApiKey(_state: ActionState, formData: FormData): P
 
   const { label } = validated.data;
 
-  // Generate key: sp_live_<32 random hex chars>
-  const rawKey = `sp_live_${randomBytes(16).toString("hex")}`;
-  const prefix = rawKey.slice(0, 15); // "sp_live_xxxxxxx" visible in UI
+  // Generate key: vl_live_<32 random hex chars>
+  const rawKey = `vl_live_${randomBytes(16).toString("hex")}`;
+  const prefix = rawKey.slice(0, 15); // "vl_live_xxxxxxx" visible in UI
   const keyHash = await hash(rawKey, 10);
 
   await db.apiKey.create({
@@ -360,10 +360,10 @@ export async function requestPasswordReset(_state: ActionState, formData: FormDa
     data: { resetToken: hashToken(resetToken), resetTokenExp },
   });
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://safepay.ng";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
   await sendEmail({
     to: email,
-    subject: "Reset your SafePay password",
+    subject: "Reset your Vaultlify password",
     html: emailPasswordReset(user.name, `${base}/claim/reset?token=${resetToken}`),
   });
 

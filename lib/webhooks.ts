@@ -75,8 +75,8 @@ export async function dispatchWebhooks(
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-SafePay-Signature": `sha256=${sig}`,
-              "X-SafePay-Event": event,
+              "X-Vaultlify-Signature": `sha256=${sig}`,
+              "X-Vaultlify-Event": event,
             },
             body,
             signal: AbortSignal.timeout(5000),

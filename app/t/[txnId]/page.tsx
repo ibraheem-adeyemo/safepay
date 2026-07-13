@@ -40,7 +40,7 @@ export default async function PublicTransactionPage({
           <h1 className="text-xl font-bold text-stone-800 mb-2">Transaction not found</h1>
           <p className="text-stone-500 text-sm">This link may have expired or been removed.</p>
           <Link href="/" className="mt-6 inline-block text-emerald-700 font-semibold text-sm hover:underline">
-            Go to SafePay →
+            Go to Vaultlify →
           </Link>
         </div>
       </div>
@@ -112,13 +112,13 @@ export default async function PublicTransactionPage({
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
             <p className="font-bold text-emerald-800 mb-1">🎉 You've joined this transaction!</p>
             <p className="text-sm text-emerald-700">
-              SafePay is holding the escrow. You&apos;ll be notified as the transaction progresses.
+              Vaultlify is holding the escrow. You&apos;ll be notified as the transaction progresses.
             </p>
             {session && !myParty?.user.isClaimed && (
               <div className="mt-3 bg-white border border-emerald-200 rounded-xl px-4 py-3 text-sm">
                 <p className="font-semibold text-stone-800 mb-1">Set a password to access your dashboard</p>
                 <p className="text-stone-500 text-xs mb-2">
-                  Your SafePay account was created. Set a password to manage all your transactions from one place.
+                  Your Vaultlify account was created. Set a password to manage all your transactions from one place.
                 </p>
                 <Link
                   href="/dashboard"
@@ -166,7 +166,7 @@ export default async function PublicTransactionPage({
               </div>
               <div className="text-right">
                 <p className="text-emerald-300 text-xs">Protected by</p>
-                <p className="text-white font-bold">🛡 SafePay</p>
+                <p className="text-white font-bold">🛡 Vaultlify</p>
               </div>
             </div>
           </div>
@@ -223,7 +223,7 @@ export default async function PublicTransactionPage({
                   <span>Bank</span><span className="font-semibold">First Bank of Nigeria</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
-                  <span>Account Name</span><span className="font-semibold">SafePay Escrow Ltd</span>
+                  <span>Account Name</span><span className="font-semibold">Vaultlify Escrow Ltd</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
                   <span>Account Number</span><span className="font-bold font-mono">0123456789</span>

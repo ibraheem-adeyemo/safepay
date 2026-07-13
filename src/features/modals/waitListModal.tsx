@@ -480,7 +480,7 @@ export function WaitlistModal({
               </h4>
               <p className="text-stone-600 text-sm leading-relaxed mb-6">
                 We've reserved your early access spot. You'll be among the{" "}
-                <strong>first people</strong> to use SafePay when we launch.
+                <strong>first people</strong> to use Vaultlify when we launch.
                 We'll email you at{" "}
                 <span className="text-emerald-700 font-medium">{form.email}</span>{" "}
                 with everything you need.

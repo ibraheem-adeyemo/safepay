@@ -8,7 +8,7 @@ export async function authenticateApiKey(
   if (!auth?.startsWith("Bearer ")) return null;
 
   const token = auth.slice(7).trim();
-  if (!token.startsWith("sp_live_")) return null;
+  if (!token.startsWith("vl_live_")) return null;
 
   // Narrow to one candidate using the stored prefix before running bcrypt
   const prefix = token.slice(0, 15);
