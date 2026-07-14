@@ -83,7 +83,7 @@ export default async function PublicTransactionPage({
       <header className="bg-white border-b border-stone-200">
         <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="text-lg font-black text-emerald-800 tracking-tight">
-            Safe<span className="text-amber-500">Pay</span>
+            Vault<span className="text-amber-500">lify</span>
           </Link>
           {session ? (
             <Link href="/dashboard" className="text-sm text-stone-500 hover:text-stone-800 font-semibold transition-colors">
@@ -322,17 +322,48 @@ export default async function PublicTransactionPage({
           </div>
         )}
 
-        {/* ── Generic state: token expired or no access ── */}
+        {/* ── Not logged in, transaction already in progress ── */}
         {!canAccept && !myParty && transaction.status !== "CREATED" && (
-          <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8 text-center">
-            <div className="text-4xl mb-3">🔒</div>
-            <p className="font-bold text-stone-800 mb-1">Transaction in progress</p>
-            <p className="text-stone-500 text-sm">
-              This transaction is already underway. If you are a party to it,{" "}
-              <Link href="/login" className="text-emerald-700 font-semibold hover:underline">
-                sign in
-              </Link>{" "}
-              to view the details.
+          <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">🔐</div>
+              <h2 className="text-lg font-bold text-stone-800 mb-2">Sign in to continue</h2>
+              <p className="text-stone-500 text-sm">
+                {transaction.status === "AWAITING_PAYMENT"
+                  ? "This escrow is waiting for payment. Sign in to see exactly where to send your money."
+                  : "This escrow is in progress. Sign in with your Vaultlify account to view details and take action."}
+              </p>
+            </div>
+
+            {transaction.status === "AWAITING_PAYMENT" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4 text-sm text-amber-800">
+                <p className="font-bold mb-0.5">Payment is waiting</p>
+                <p className="text-xs text-amber-700">
+                  The seller is ready. Sign in to get the bank account details and send{" "}
+                  <strong>₦{formatAmount(transaction.amount)}</strong> to complete the escrow.
+                </p>
+              </div>
+            )}
+
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
+              className="w-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-4 rounded-xl transition-all text-sm shadow-lg shadow-emerald-100 mb-4"
+            >
+              Sign in to Vaultlify →
+            </Link>
+
+            <p className="text-center text-xs text-stone-400">
+              New to Vaultlify?{" "}
+              <Link href="/register" className="text-emerald-700 font-semibold hover:underline">
+                Create a free account
+              </Link>
+              {" · "}
+              <Link
+                href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
+                className="text-stone-500 hover:underline"
+              >
+                Already have an account? Sign in
+              </Link>
             </p>
           </div>
         )}
