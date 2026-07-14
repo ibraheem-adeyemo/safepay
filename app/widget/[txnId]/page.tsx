@@ -359,13 +359,45 @@ export default async function WidgetPage({
         </div>
       )}
 
-      {/* ── Locked state (not a party, not invited) ── */}
+      {/* ── Not logged in, transaction already in progress ── */}
       {!canAccept && !myParty && !["COMPLETED", "CANCELLED", "DISPUTED"].includes(transaction.status) && (
-        <div className="bg-white rounded-2xl border border-stone-200 px-5 py-6 text-center">
-          <div className="text-3xl mb-2">🔒</div>
-          <p className="font-bold text-stone-800 text-sm">Transaction in progress</p>
-          <p className="text-stone-500 text-xs mt-1">
-            If you are a party to this escrow, sign in to view the details.
+        <div className="bg-white rounded-2xl border border-stone-200 px-5 py-6">
+          <div className="text-center mb-4">
+            <div className="text-3xl mb-2">🔐</div>
+            <p className="font-bold text-stone-800 text-sm mb-1">Sign in to continue</p>
+            <p className="text-stone-500 text-xs">
+              {transaction.status === "AWAITING_PAYMENT"
+                ? "Sign in to see where to send your payment of ₦" + formatAmount(transaction.amount) + "."
+                : "Sign in to view this escrow and take action."}
+            </p>
+          </div>
+
+          {transaction.status === "AWAITING_PAYMENT" && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800 mb-3">
+              <strong>Payment is waiting</strong> — the seller is ready. Sign in to get the bank transfer details.
+            </div>
+          )}
+
+          <a
+            href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-3 rounded-xl transition-all text-sm mb-2"
+          >
+            Sign in to Vaultlify →
+          </a>
+          <p className="text-center text-xs text-stone-400 mb-3">Opens in a new tab</p>
+
+          <p className="text-center text-xs text-stone-400">
+            New to Vaultlify?{" "}
+            <a
+              href="/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-700 font-semibold hover:underline"
+            >
+              Create a free account →
+            </a>
           </p>
         </div>
       )}
