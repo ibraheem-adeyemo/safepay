@@ -180,88 +180,94 @@ async function handleMarketplace(body: unknown, platformUserId: string) {
     return Response.json({ error: "Seller and buyer cannot be the same person." }, { status: 422 });
   }
 
-  const fee = await calculateFee(amount, platformUserId);
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+  try {
+    const fee = await calculateFee(amount, platformUserId);
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
 
-  // Find-or-create shadow accounts for both parties in parallel
-  const [sellerUser, buyerUser] = await Promise.all([
-    findOrCreateShadowUser(seller.name, seller.email, seller.phone),
-    findOrCreateShadowUser(buyer.name, buyer.email, buyer.phone),
-  ]);
+    // Find-or-create shadow accounts for both parties in parallel
+    const [sellerUser, buyerUser] = await Promise.all([
+      findOrCreateShadowUser(seller.name, seller.email, seller.phone),
+      findOrCreateShadowUser(buyer.name, buyer.email, buyer.phone),
+    ]);
 
-  const transaction = await db.transaction.create({
-    data: {
-      reference: generateReference(),
-      title,
-      description,
-      amount,
-      currency: "NGN",
-      // Both parties already exist — move straight to awaiting payment
-      status: "AWAITING_PAYMENT",
-      channel: "API",
-      feeType: fee.feeType,
-      feeValue: fee.feeValue,
-      feeAmount: fee.feeAmount,
-      platformId: platformUserId,
-      parties: {
-        create: [
-          {
-            userId: sellerUser.id,
-            role: "SELLER",
-            isInitiator: true,
-            accepted: true,
-            acceptedAt: new Date(),
+    const transaction = await db.transaction.create({
+      data: {
+        reference: generateReference(),
+        title,
+        description,
+        amount,
+        currency: "NGN",
+        // Both parties already exist — move straight to awaiting payment
+        status: "AWAITING_PAYMENT",
+        channel: "API",
+        feeType: fee.feeType,
+        feeValue: fee.feeValue,
+        feeAmount: fee.feeAmount,
+        platformId: platformUserId,
+        parties: {
+          create: [
+            {
+              userId: sellerUser.id,
+              role: "SELLER",
+              isInitiator: true,
+              accepted: true,
+              acceptedAt: new Date(),
+            },
+            {
+              userId: buyerUser.id,
+              role: "BUYER",
+              isInitiator: false,
+              accepted: true,
+              acceptedAt: new Date(),
+            },
+          ],
+        },
+        statusLogs: {
+          create: {
+            toStatus: "AWAITING_PAYMENT",
+            actorId: platformUserId,
+            note: "Marketplace transaction created via API — both parties pre-registered",
           },
-          {
-            userId: buyerUser.id,
-            role: "BUYER",
-            isInitiator: false,
-            accepted: true,
-            acceptedAt: new Date(),
-          },
-        ],
-      },
-      statusLogs: {
-        create: {
-          toStatus: "AWAITING_PAYMENT",
-          actorId: platformUserId,
-          note: "Marketplace transaction created via API — both parties pre-registered",
         },
       },
-    },
-    include: {
-      parties: { select: { role: true, userId: true, isInitiator: true } },
-    },
-  });
-
-  // Email claim links to any brand-new shadow accounts (non-blocking)
-  void sendClaimEmailIfNew(sellerUser, seller.email, base);
-  void sendClaimEmailIfNew(buyerUser, buyer.email, base);
-
-  await dispatchWebhooks(transaction.id, "transaction.created", {
-    transaction: {
-      id: transaction.id,
-      reference: transaction.reference,
-      title,
-      amount,
-      status: "AWAITING_PAYMENT",
-    },
-  });
-
-  const widgetBase = `${base}/widget/${transaction.id}`;
-
-  return Response.json(
-    {
-      data: {
-        ...transaction,
-        // Convenience URLs the platform can embed directly — no invite token needed
-        // since both parties are already registered on the transaction
-        sellerWidgetUrl: widgetBase,
-        buyerWidgetUrl: widgetBase,
+      include: {
+        parties: { select: { role: true, userId: true, isInitiator: true } },
       },
-    },
-    { status: 201 }
-  );
+    });
+
+    // Email claim links to any brand-new shadow accounts (non-blocking)
+    void sendClaimEmailIfNew(sellerUser, seller.email, base);
+    void sendClaimEmailIfNew(buyerUser, buyer.email, base);
+
+    await dispatchWebhooks(transaction.id, "transaction.created", {
+      transaction: {
+        id: transaction.id,
+        reference: transaction.reference,
+        title,
+        amount,
+        status: "AWAITING_PAYMENT",
+      },
+    });
+
+    const widgetBase = `${base}/widget/${transaction.id}`;
+
+    return Response.json(
+      {
+        data: {
+          ...transaction,
+          // Convenience URLs the platform can embed directly — no invite token needed
+          // since both parties are already registered on the transaction
+          sellerWidgetUrl: widgetBase,
+          buyerWidgetUrl: widgetBase,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("[marketplace] unhandled error:", err);
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return Response.json({ error: message }, { status: 500 });
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -274,10 +280,15 @@ async function findOrCreateShadowUser(
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     if (!existing.isClaimed) {
+      // Phone may already belong to a different account — ignore the conflict and
+      // keep the existing phone rather than crashing the transaction.
       await db.user.update({
         where: { id: existing.id },
         data: { name, phone: phone || existing.phone },
-      });
+      }).catch(() => db.user.update({
+        where: { id: existing.id },
+        data: { name },
+      }));
     }
     return { ...existing, isNew: false };
   }
@@ -295,11 +306,25 @@ async function findOrCreateShadowUser(
     });
     return { ...created, isNew: true };
   } catch {
-    // Another concurrent request created this user between our findUnique and create.
-    // Fetch the now-existing record and treat it as an existing user.
+    // Case 1: email race — another request won the create between our findUnique and create.
     const raceWinner = await db.user.findUnique({ where: { email } });
-    if (!raceWinner) throw new Error(`Failed to find or create user for ${email}`);
-    return { ...raceWinner, isNew: false };
+    if (raceWinner) return { ...raceWinner, isNew: false };
+
+    // Case 2: phone unique-constraint conflict — that phone belongs to a different account.
+    // Retry without the phone; the user can add it later via the claim flow.
+    if (phone) {
+      try {
+        const created = await db.user.create({
+          data: { name, email, phone: null, accountType: "PERSONAL", isClaimed: false, channel: "API" },
+        });
+        return { ...created, isNew: true };
+      } catch {
+        const raceWinner2 = await db.user.findUnique({ where: { email } });
+        if (raceWinner2) return { ...raceWinner2, isNew: false };
+      }
+    }
+
+    throw new Error(`Failed to find or create shadow account for ${email}`);
   }
 }
 
