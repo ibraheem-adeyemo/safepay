@@ -9,6 +9,7 @@ import { dispatchWebhooks } from "@/lib/webhooks";
 import { sendEmail, emailClaimAccount } from "@/lib/email";
 import { randomBytes } from "crypto";
 import { hashToken } from "@/lib/token";
+import { checkPasswordResetRateLimit, recordPasswordResetAttempt } from "@/lib/rate-limit";
 import type { PartyRole } from "@prisma/client";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
@@ -324,4 +325,52 @@ export async function widgetConfirmReceipt(txnId: string): Promise<void> {
   });
 
   redirect(`/widget/${txnId}`);
+}
+
+// ─── Resend claim email — for shadow accounts who haven't set a password yet ──
+
+export type ResendClaimState = { success?: boolean; message?: string } | undefined;
+
+export async function resendClaimEmail(
+  txnId: string,
+  _state: ResendClaimState,
+  formData: FormData
+): Promise<ResendClaimState> {
+  const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  if (!email) return { message: "Please enter your email address." };
+
+  // Rate limited: 3 per email per hour (reuses the password-reset bucket)
+  const allowed = await checkPasswordResetRateLimit(email);
+  if (!allowed) {
+    return { message: "Too many requests. Please wait a moment before trying again." };
+  }
+  await recordPasswordResetAttempt(email);
+
+  // Only send if the email belongs to an unclaimed party on this transaction.
+  // Always return a generic success — don't let callers enumerate party emails.
+  const user = await db.user.findUnique({ where: { email } });
+  if (user && !user.isClaimed) {
+    const isParty = await db.transactionParty.findFirst({
+      where: { transactionId: txnId, userId: user.id },
+    });
+    if (isParty) {
+      const claimToken = randomBytes(32).toString("hex");
+      const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
+      await db.user.update({
+        where: { id: user.id },
+        data: { claimToken: hashToken(claimToken), claimTokenExp },
+      });
+      const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+      await sendEmail({
+        to: email,
+        subject: "Set up your Vaultlify account to complete your escrow",
+        html: emailClaimAccount(user.name, `${base}/claim?token=${claimToken}`),
+      });
+    }
+  }
+
+  return {
+    success: true,
+    message: "Done! If your email is registered on this transaction, you'll receive a setup link shortly.",
+  };
 }
