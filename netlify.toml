@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Tell Netlify's secret scanner that these environment variable keys are
+  # intentional build-time secrets — not accidental leaks from the repo.
+  SECRETS_SCAN_OMIT_KEYS = "DATABASE_URL,DATABASE_URL_UNPOOLED,SESSION_SECRET,RESEND_API_KEY,APPS_SCRIPT_URL,ADMIN_EMAIL,ADMIN_PASSWORD,NEXT_PUBLIC_APP_URL,ESCROW_BANK_NAME,ESCROW_ACCOUNT_NAME,ESCROW_ACCOUNT_NUMBER"

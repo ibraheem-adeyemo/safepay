@@ -30,29 +30,31 @@ async function main() {
     console.log("✅ Global fee config created: 1.5%");
   }
 
-  // Super admin account
-  const adminEmail = "admin@vaultlify.com";
-  const adminPassword = "Vaultlify@Admin2026!";
+  // Super admin account — credentials come from environment, never hardcoded
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
 
-  const existing = await db.user.findUnique({ where: { email: adminEmail } });
-  if (!existing) {
-    const passwordHash = await hash(adminPassword, 12);
-    await db.user.create({
-      data: {
-        name: "Vaultlify Admin",
-        email: adminEmail,
-        passwordHash,
-        accountType: "SUPER_ADMIN",
-        emailVerified: true,
-        isClaimed: true,
-        channel: "WEB",
-      },
-    });
-    console.log(`✅ Super admin created: ${adminEmail}`);
-    console.log(`   Password: ${adminPassword}`);
-    console.log("   ⚠️  Change this password immediately after first login.");
+  if (!adminEmail || !adminPassword) {
+    console.warn("⚠️  ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping admin creation.");
   } else {
-    console.log(`ℹ️  Super admin already exists: ${adminEmail}`);
+    const existing = await db.user.findUnique({ where: { email: adminEmail } });
+    if (!existing) {
+      const passwordHash = await hash(adminPassword, 12);
+      await db.user.create({
+        data: {
+          name: "Vaultlify Admin",
+          email: adminEmail,
+          passwordHash,
+          accountType: "SUPER_ADMIN",
+          emailVerified: true,
+          isClaimed: true,
+          channel: "WEB",
+        },
+      });
+      console.log(`✅ Super admin created: ${adminEmail}`);
+    } else {
+      console.log(`ℹ️  Super admin already exists: ${adminEmail}`);
+    }
   }
 
   console.log("✅ Seed complete.");

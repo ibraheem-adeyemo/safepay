@@ -206,13 +206,13 @@ export default async function WidgetPage({
             </p>
             <div className="bg-white border border-blue-200 rounded-xl px-3 py-2.5 text-xs space-y-1">
               <div className="flex justify-between text-stone-600">
-                <span>Bank</span><span className="font-semibold">First Bank of Nigeria</span>
+                <span>Bank</span><span className="font-semibold">{process.env.ESCROW_BANK_NAME}</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Account</span><span className="font-semibold">Vaultlify Escrow Ltd</span>
+                <span>Account</span><span className="font-semibold">{process.env.ESCROW_ACCOUNT_NAME}</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Number</span><span className="font-bold font-mono">0123456789</span>
+                <span>Number</span><span className="font-bold font-mono">{process.env.ESCROW_ACCOUNT_NUMBER}</span>
               </div>
               <div className="flex justify-between text-stone-600">
                 <span>Reference</span>
