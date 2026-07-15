@@ -11,9 +11,11 @@ import {
   widgetAcceptAsLoggedIn,
   widgetMarkDelivered,
   widgetConfirmReceipt,
+  resendClaimEmail,
 } from "@/app/actions/widget";
 import { WidgetEvents } from "./WidgetEvents";
 import WidgetAcceptForm from "./AcceptForm";
+import { ResendClaimForm } from "@/src/features/components/ResendClaimForm";
 
 export default async function WidgetPage({
   params,
@@ -76,6 +78,7 @@ export default async function WidgetPage({
   const guestAcceptAction = widgetAcceptAsGuest.bind(null, txnId, token ?? "");
   const deliverAction = widgetMarkDelivered.bind(null, txnId);
   const confirmAction = widgetConfirmReceipt.bind(null, txnId);
+  const resendClaimAction = resendClaimEmail.bind(null, txnId);
 
   return (
     <div className="px-4 py-5 space-y-4 max-w-sm mx-auto">
@@ -361,44 +364,44 @@ export default async function WidgetPage({
 
       {/* ── Not logged in, transaction already in progress ── */}
       {!canAccept && !myParty && !["COMPLETED", "CANCELLED", "DISPUTED"].includes(transaction.status) && (
-        <div className="bg-white rounded-2xl border border-stone-200 px-5 py-6">
-          <div className="text-center mb-4">
-            <div className="text-3xl mb-2">🔐</div>
-            <p className="font-bold text-stone-800 text-sm mb-1">Sign in to continue</p>
-            <p className="text-stone-500 text-xs">
-              {transaction.status === "AWAITING_PAYMENT"
-                ? "Sign in to see where to send your payment of ₦" + formatAmount(transaction.amount) + "."
-                : "Sign in to view this escrow and take action."}
-            </p>
-          </div>
+        <div className="bg-white rounded-2xl border border-stone-200 px-5 py-6 space-y-4">
 
+          {/* Payment-waiting banner */}
           {transaction.status === "AWAITING_PAYMENT" && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800 mb-3">
-              <strong>Payment is waiting</strong> — the seller is ready. Sign in to get the bank transfer details.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 text-xs text-amber-800">
+              <p className="font-bold mb-0.5">Payment is waiting</p>
+              <p>The seller is ready. Access your account to see where to send <strong>₦{formatAmount(transaction.amount)}</strong>.</p>
             </div>
           )}
 
-          <a
-            href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-3 rounded-xl transition-all text-sm mb-2"
-          >
-            Sign in to Vaultlify →
-          </a>
-          <p className="text-center text-xs text-stone-400 mb-3">Opens in a new tab</p>
+          {/* Get access link — always shown regardless of account type */}
+          <div>
+            <p className="font-bold text-stone-800 text-sm mb-1">Get your access link</p>
+            <p className="text-stone-500 text-xs mb-3">
+              Enter the email address you used for this transaction. We&apos;ll send you a link to access your account.
+            </p>
+            <ResendClaimForm action={resendClaimAction} compact />
+          </div>
 
-          <p className="text-center text-xs text-stone-400">
-            New to Vaultlify?{" "}
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-stone-100" />
+            <span className="text-xs text-stone-400">already have a password?</span>
+            <div className="flex-1 h-px bg-stone-100" />
+          </div>
+
+          {/* Sign in — for users who already set their password */}
+          <div>
             <a
-              href="/register"
+              href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-700 font-semibold hover:underline"
+              className="w-full flex items-center justify-center bg-stone-800 hover:bg-stone-900 active:scale-[0.98] text-white font-bold py-2.5 rounded-xl transition-all text-xs mb-1"
             >
-              Create a free account →
+              Sign in to Vaultlify →
             </a>
-          </p>
+            <p className="text-center text-xs text-stone-400">Opens in a new tab</p>
+          </div>
         </div>
       )}
     </div>

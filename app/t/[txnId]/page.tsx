@@ -9,7 +9,9 @@ import {
   STATUS_META,
 } from "@/lib/transaction/helpers";
 import { acceptTransactionAsLoggedIn } from "@/app/actions/transaction";
+import { resendClaimEmail } from "@/app/actions/widget";
 import AcceptForm from "./AcceptForm";
+import { ResendClaimForm } from "@/src/features/components/ResendClaimForm";
 
 export default async function PublicTransactionPage({
   params,
@@ -76,6 +78,7 @@ export default async function PublicTransactionPage({
   const needsAcceptForm = canAccept && !session;
 
   const acceptLoggedInAction = acceptTransactionAsLoggedIn.bind(null, txnId, token ?? "");
+  const resendClaimAction = resendClaimEmail.bind(null, txnId);
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -324,47 +327,42 @@ export default async function PublicTransactionPage({
 
         {/* ── Not logged in, transaction already in progress ── */}
         {!canAccept && !myParty && transaction.status !== "CREATED" && (
-          <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8">
-            <div className="text-center mb-5">
-              <div className="text-4xl mb-3">🔐</div>
-              <h2 className="text-lg font-bold text-stone-800 mb-2">Sign in to continue</h2>
-              <p className="text-stone-500 text-sm">
-                {transaction.status === "AWAITING_PAYMENT"
-                  ? "This escrow is waiting for payment. Sign in to see exactly where to send your money."
-                  : "This escrow is in progress. Sign in with your Vaultlify account to view details and take action."}
-              </p>
-            </div>
+          <div className="bg-white rounded-2xl border border-stone-200 px-6 py-8 space-y-5">
 
+            {/* Payment-waiting banner */}
             {transaction.status === "AWAITING_PAYMENT" && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4 text-sm text-amber-800">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-800">
                 <p className="font-bold mb-0.5">Payment is waiting</p>
                 <p className="text-xs text-amber-700">
-                  The seller is ready. Sign in to get the bank account details and send{" "}
-                  <strong>₦{formatAmount(transaction.amount)}</strong> to complete the escrow.
+                  The seller is ready. Access your account to see where to send{" "}
+                  <strong>₦{formatAmount(transaction.amount)}</strong>.
                 </p>
               </div>
             )}
 
+            {/* Setup link — works for anyone: shadow accounts get an email, others are gently ignored */}
+            <div>
+              <h2 className="text-base font-bold text-stone-800 mb-1">Get your access link</h2>
+              <p className="text-stone-500 text-sm mb-4">
+                Enter the email address you used when this transaction was set up. We&apos;ll send you a link to access your account.
+              </p>
+              <ResendClaimForm action={resendClaimAction} />
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-stone-100" />
+              <span className="text-xs text-stone-400">already have a password?</span>
+              <div className="flex-1 h-px bg-stone-100" />
+            </div>
+
+            {/* Sign in — for returning users who already claimed their account */}
             <Link
               href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
-              className="w-full flex items-center justify-center bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-4 rounded-xl transition-all text-sm shadow-lg shadow-emerald-100 mb-4"
+              className="w-full flex items-center justify-center bg-stone-800 hover:bg-stone-900 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl transition-all text-sm"
             >
               Sign in to Vaultlify →
             </Link>
-
-            <p className="text-center text-xs text-stone-400">
-              New to Vaultlify?{" "}
-              <Link href="/register" className="text-emerald-700 font-semibold hover:underline">
-                Create a free account
-              </Link>
-              {" · "}
-              <Link
-                href={`/login?callbackUrl=${encodeURIComponent(`/t/${txnId}`)}`}
-                className="text-stone-500 hover:underline"
-              >
-                Already have an account? Sign in
-              </Link>
-            </p>
           </div>
         )}
 
