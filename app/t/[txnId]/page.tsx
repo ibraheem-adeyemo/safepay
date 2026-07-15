@@ -223,13 +223,13 @@ export default async function PublicTransactionPage({
               </p>
               <div className="bg-white border border-blue-200 rounded-xl px-4 py-3 text-sm space-y-1">
                 <div className="flex justify-between text-stone-600">
-                  <span>Bank</span><span className="font-semibold">First Bank of Nigeria</span>
+                  <span>Bank</span><span className="font-semibold">{process.env.ESCROW_BANK_NAME}</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
-                  <span>Account Name</span><span className="font-semibold">Vaultlify Escrow Ltd</span>
+                  <span>Account Name</span><span className="font-semibold">{process.env.ESCROW_ACCOUNT_NAME}</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
-                  <span>Account Number</span><span className="font-bold font-mono">0123456789</span>
+                  <span>Account Number</span><span className="font-bold font-mono">{process.env.ESCROW_ACCOUNT_NUMBER}</span>
                 </div>
                 <div className="flex justify-between text-stone-600">
                   <span>Reference</span>

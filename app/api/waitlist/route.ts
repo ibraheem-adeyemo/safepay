@@ -70,7 +70,6 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("[waitlist] Row written:", body.name, body.email);
     return Response.json({ success: true });
 
   } catch (error) {
