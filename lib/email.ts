@@ -7,7 +7,8 @@ export function txnUrl(txnId: string) {
   return `${BASE}/dashboard/transactions/${txnId}`;
 }
 
-// Best-effort — never throws, silently skips when RESEND_API_KEY is not set
+// Best-effort — never throws, silently skips when RESEND_API_KEY is not set.
+// Returns true if Resend accepted the message, false otherwise.
 export async function sendEmail({
   to,
   subject,
@@ -16,13 +17,25 @@ export async function sendEmail({
   to: string;
   subject: string;
   html: string;
-}): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return;
+}): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping email to:", to);
+    return false;
+  }
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({ from: FROM, to, subject, html });
+    const actualTo = process.env.DEV_EMAIL_OVERRIDE ?? to;
+    if (actualTo !== to) console.log("[email] DEV override: redirecting", to, "→", actualTo);
+    const { data, error } = await resend.emails.send({ from: FROM, to: actualTo, subject, html });
+    if (error) {
+      console.error("[email] Resend rejected:", JSON.stringify(error), "| to:", actualTo, "| from:", FROM);
+      return false;
+    }
+    console.log("[email] sent id:", data?.id, "| to:", actualTo, "| subject:", subject);
+    return true;
   } catch (err) {
-    console.error("[email] send failed:", err);
+    console.error("[email] send threw:", err, "| to:", to);
+    return false;
   }
 }
 
@@ -42,7 +55,7 @@ function layout(body: string) {
         <tr>
           <td style="background:#166534;padding:20px 32px;">
             <span style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
-              Safe<span style="color:#f59e0b;">Pay</span>
+              Vault<span style="color:#f59e0b;">lify</span>
             </span>
           </td>
         </tr>
