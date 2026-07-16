@@ -337,22 +337,25 @@ export async function resendClaimEmail(
   formData: FormData
 ): Promise<ResendClaimState> {
   const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  console.log("[resendClaim] called | txnId:", txnId, "| email:", email);
   if (!email) return { message: "Please enter your email address." };
 
-  // Rate limited: 3 per email per hour (reuses the password-reset bucket)
   const allowed = await checkPasswordResetRateLimit(email);
   if (!allowed) {
+    console.log("[resendClaim] rate limited:", email);
     return { message: "Too many requests. Please wait a moment before trying again." };
   }
   await recordPasswordResetAttempt(email);
 
-  // Only send if the email belongs to an unclaimed party on this transaction.
-  // Always return a generic success — don't let callers enumerate party emails.
   const user = await db.user.findUnique({ where: { email } });
+  console.log("[resendClaim] user found:", !!user, "| isClaimed:", user?.isClaimed ?? "n/a");
+
   if (user && !user.isClaimed) {
     const isParty = await db.transactionParty.findFirst({
       where: { transactionId: txnId, userId: user.id },
     });
+    console.log("[resendClaim] isParty:", !!isParty);
+
     if (isParty) {
       const claimToken = randomBytes(32).toString("hex");
       const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
@@ -361,6 +364,7 @@ export async function resendClaimEmail(
         data: { claimToken: hashToken(claimToken), claimTokenExp },
       });
       const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+      console.log("[resendClaim] sending email | base:", base);
       await sendEmail({
         to: email,
         subject: "Set up your Vaultlify account to complete your escrow",
