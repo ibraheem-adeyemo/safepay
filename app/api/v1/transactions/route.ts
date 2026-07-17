@@ -2,10 +2,10 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { authenticateApiKey } from "@/lib/api-auth";
-import { generateReference, calculateFee } from "@/lib/transaction/helpers";
+import { generateReference, calculateFee, formatAmount } from "@/lib/transaction/helpers";
 import { dispatchWebhooks } from "@/lib/webhooks";
 import { notifyUser } from "@/lib/notifications";
-import { sendEmail, emailClaimAccount } from "@/lib/email";
+import { sendEmail, emailMarketplaceBuyer, emailMarketplaceSeller } from "@/lib/email";
 import { hashToken } from "@/lib/token";
 
 const VALID_STATUSES = [
@@ -235,9 +235,21 @@ async function handleMarketplace(body: unknown, platformUserId: string) {
       },
     });
 
-    // Email claim links to any brand-new shadow accounts (non-blocking)
-    void sendClaimEmailIfNew(sellerUser, seller.email, base);
-    void sendClaimEmailIfNew(buyerUser, buyer.email, base);
+    // Send tailored welcome emails to both parties (non-blocking)
+    const [platformName, amountStr] = [
+      await getPlatformName(platformUserId),
+      formatAmount(amount),
+    ];
+    void sendMarketplaceWelcomeEmail({
+      user: sellerUser, email: seller.email, role: "SELLER",
+      sellerName: seller.name, buyerName: buyer.name,
+      title, amount: amountStr, platformName, base,
+    });
+    void sendMarketplaceWelcomeEmail({
+      user: buyerUser, email: buyer.email, role: "BUYER",
+      sellerName: seller.name, buyerName: buyer.name,
+      title, amount: amountStr, platformName, base,
+    });
 
     await dispatchWebhooks(transaction.id, "transaction.created", {
       transaction: {
@@ -328,28 +340,50 @@ async function findOrCreateShadowUser(
   }
 }
 
-async function sendClaimEmailIfNew(
-  user: { id: string; isNew: boolean; isClaimed: boolean },
-  email: string,
-  base: string
-): Promise<void> {
-  // Send to both new shadow accounts AND existing unclaimed ones —
-  // a returning unclaimed user still needs a link to access the new transaction.
-  if (user.isClaimed) return;
+async function getPlatformName(platformUserId: string): Promise<string> {
+  const user = await db.user.findUnique({
+    where: { id: platformUserId },
+    select: { name: true, business: { select: { name: true } } },
+  });
+  return user?.business?.name ?? user?.name ?? "the platform";
+}
+
+async function sendMarketplaceWelcomeEmail(params: {
+  user: { id: string; isClaimed: boolean };
+  email: string;
+  role: "BUYER" | "SELLER";
+  buyerName: string;
+  sellerName: string;
+  title: string;
+  amount: string;
+  platformName: string;
+  base: string;
+}): Promise<void> {
+  if (params.user.isClaimed) return;
   try {
     const claimToken = randomBytes(32).toString("hex");
     const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
     await db.user.update({
-      where: { id: user.id },
+      where: { id: params.user.id },
       data: { claimToken: hashToken(claimToken), claimTokenExp },
     });
-    const userName = await db.user.findUnique({ where: { id: user.id }, select: { name: true } });
-    await sendEmail({
-      to: email,
-      subject: "You have been added to a Vaultlify escrow",
-      html: emailClaimAccount(userName?.name ?? "there", `${base}/claim?token=${claimToken}`),
-    });
+    const claimUrl = `${params.base}/claim?token=${claimToken}`;
+    const { role, buyerName, sellerName, title, amount, platformName, email } = params;
+
+    if (role === "BUYER") {
+      await sendEmail({
+        to: email,
+        subject: `Action required: Complete your purchase of ${title} on ${platformName}`,
+        html: emailMarketplaceBuyer(buyerName, title, amount, platformName, claimUrl),
+      });
+    } else {
+      await sendEmail({
+        to: email,
+        subject: `New order: ${buyerName} wants to buy ${title} on ${platformName}`,
+        html: emailMarketplaceSeller(sellerName, buyerName, title, amount, platformName, claimUrl),
+      });
+    }
   } catch {
-    // Best-effort — claim email failure must not break the API response
+    // Best-effort — email failure must not break the API response
   }
 }
