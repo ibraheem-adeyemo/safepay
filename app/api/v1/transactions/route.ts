@@ -276,7 +276,7 @@ async function findOrCreateShadowUser(
   name: string,
   email: string,
   phone?: string
-): Promise<{ id: string; accountType: string; name: string; isNew: boolean }> {
+): Promise<{ id: string; accountType: string; name: string; isClaimed: boolean; isNew: boolean }> {
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     if (!existing.isClaimed) {
@@ -329,11 +329,13 @@ async function findOrCreateShadowUser(
 }
 
 async function sendClaimEmailIfNew(
-  user: { id: string; isNew: boolean },
+  user: { id: string; isNew: boolean; isClaimed: boolean },
   email: string,
   base: string
 ): Promise<void> {
-  if (!user.isNew) return;
+  // Send to both new shadow accounts AND existing unclaimed ones —
+  // a returning unclaimed user still needs a link to access the new transaction.
+  if (user.isClaimed) return;
   try {
     const claimToken = randomBytes(32).toString("hex");
     const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
