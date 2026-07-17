@@ -198,6 +198,17 @@ export function emailTransactionCancelled(name: string, title: string) {
   `);
 }
 
+export function emailVerifyAccount(name: string, verifyUrl: string) {
+  return layout(`
+    ${h2("Verify your email address")}
+    ${p(`Hi ${firstName(name)}, thanks for signing up for Vaultlify!`)}
+    ${p("Click the button below to verify your email address and activate your account. You won't be able to sign in until your email is verified.")}
+    <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 24 hours.</p>
+    ${btn(verifyUrl, "Verify My Email →")}
+    <p style="margin:24px 0 0;font-size:12px;color:#a8a29e;">If you did not create a Vaultlify account, you can safely ignore this email.</p>
+  `);
+}
+
 export function emailClaimAccount(name: string, claimUrl: string) {
   return layout(`
     ${h2("Secure your Vaultlify account")}
