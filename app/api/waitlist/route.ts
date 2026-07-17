@@ -61,7 +61,6 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log("[waitlist] Apps Script response:", data);
 
     if (!res.ok || !data.success) {
       return Response.json(

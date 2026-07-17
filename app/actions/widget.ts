@@ -19,7 +19,7 @@ import { z } from "zod";
 
 const AcceptSchema = z.object({
   name: z.string().min(2, "Enter your full name.").trim(),
-  email: z.string().email("Enter a valid email address.").trim().toLowerCase(),
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
   phone: z
     .string()
     .regex(/^\+?[0-9]{7,15}$/, "Enter a valid phone number.")
@@ -337,24 +337,20 @@ export async function resendClaimEmail(
   formData: FormData
 ): Promise<ResendClaimState> {
   const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
-  console.log("[resendClaim] called | txnId:", txnId, "| email:", email);
   if (!email) return { message: "Please enter your email address." };
 
   const allowed = await checkPasswordResetRateLimit(email);
   if (!allowed) {
-    console.log("[resendClaim] rate limited:", email);
     return { message: "Too many requests. Please wait a moment before trying again." };
   }
   await recordPasswordResetAttempt(email);
 
   const user = await db.user.findUnique({ where: { email } });
-  console.log("[resendClaim] user found:", !!user, "| isClaimed:", user?.isClaimed ?? "n/a");
 
   if (user && !user.isClaimed) {
     const isParty = await db.transactionParty.findFirst({
       where: { transactionId: txnId, userId: user.id },
     });
-    console.log("[resendClaim] isParty:", !!isParty);
 
     if (isParty) {
       const claimToken = randomBytes(32).toString("hex");
@@ -364,7 +360,6 @@ export async function resendClaimEmail(
         data: { claimToken: hashToken(claimToken), claimTokenExp },
       });
       const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
-      console.log("[resendClaim] sending email | base:", base);
       await sendEmail({
         to: email,
         subject: "Set up your Vaultlify account to complete your escrow",

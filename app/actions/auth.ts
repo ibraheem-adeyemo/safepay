@@ -3,8 +3,12 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { hash, compare } from "bcryptjs";
+import { randomBytes } from "crypto";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
+import { hashToken } from "@/lib/token";
+import { sendEmail, emailVerifyAccount } from "@/lib/email";
 import {
   checkLoginRateLimit,
   recordFailedLogin,
@@ -44,7 +48,7 @@ export async function register(
 
   const validated = RegisterSchema.safeParse(raw);
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors };
+    return { errors: z.flattenError(validated.error).fieldErrors };
   }
 
   const { name, email, password, phone, accountType, businessName } = validated.data;
@@ -75,24 +79,32 @@ export async function register(
       phone: phone || null,
       accountType,
       isClaimed: true,
+      emailVerified: false,
       channel: "WEB",
       ...(accountType === "BUSINESS" && businessName
-        ? {
-            business: {
-              create: { name: businessName },
-            },
-          }
+        ? { business: { create: { name: businessName } } }
         : {}),
     },
   });
 
-  await createSession({
-    userId: user.id,
-    accountType: user.accountType,
-    name: user.name,
+  // Generate a 24-hour verification token and email it
+  const verifyToken = randomBytes(32).toString("hex");
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      verifyToken: hashToken(verifyToken),
+      verifyTokenExp: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
   });
 
-  redirect("/dashboard");
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+  await sendEmail({
+    to: email,
+    subject: "Verify your Vaultlify email address",
+    html: emailVerifyAccount(name, `${base}/verify?token=${verifyToken}`),
+  });
+
+  redirect("/check-email");
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -108,12 +120,11 @@ export async function login(
 
   const validated = LoginSchema.safeParse(raw);
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors };
+    return { errors: z.flattenError(validated.error).fieldErrors };
   }
 
   const { email, password } = validated.data;
 
-  // Rate limit: 10 attempts per email per 15 minutes
   const allowed = await checkLoginRateLimit(email, "unknown");
   if (!allowed) {
     return { message: "Too many login attempts. Please try again in 15 minutes." };
@@ -136,6 +147,12 @@ export async function login(
     return { message: "Invalid email or password." };
   }
 
+  if (!user.emailVerified) {
+    return {
+      message: "Please verify your email address before signing in. Check your inbox for the verification link.",
+    };
+  }
+
   await clearLoginAttempts(email);
 
   await createSession({
@@ -150,6 +167,40 @@ export async function login(
       : "/dashboard";
 
   redirect(destination);
+}
+
+// ─── Verify Email ─────────────────────────────────────────────────────────────
+
+export async function verifyEmail(
+  token: string
+): Promise<{ success: boolean; message: string }> {
+  if (!token) {
+    return { success: false, message: "Verification link is missing a token." };
+  }
+
+  const user = await db.user.findFirst({
+    where: { verifyToken: hashToken(token) },
+    select: { id: true, verifyTokenExp: true, emailVerified: true },
+  });
+
+  if (!user) {
+    return { success: false, message: "This verification link is invalid or has already been used." };
+  }
+
+  if (user.emailVerified) {
+    return { success: true, message: "Your email is already verified. You can sign in." };
+  }
+
+  if (!user.verifyTokenExp || user.verifyTokenExp < new Date()) {
+    return { success: false, message: "This verification link has expired. Please register again to get a new one." };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { emailVerified: true, verifyToken: null, verifyTokenExp: null },
+  });
+
+  return { success: true, message: "Your email has been verified! You can now sign in." };
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

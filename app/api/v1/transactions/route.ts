@@ -69,7 +69,7 @@ const DirectSchema = z.object({
 // Marketplace mode: the API key holder is the platform; both parties supplied upfront
 const PartySchema = z.object({
   name: z.string().min(2).trim(),
-  email: z.string().email().trim().toLowerCase(),
+  email: z.email().trim().toLowerCase(),
   phone: z.string().regex(/^\+?[0-9]{7,15}$/).optional().or(z.literal("")),
 });
 

@@ -18,23 +18,13 @@ export async function sendEmail({
   subject: string;
   html: string;
 }): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("[email] RESEND_API_KEY not set — skipping email to:", to);
-    return false;
-  }
+  if (!process.env.RESEND_API_KEY) return false;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const actualTo = process.env.DEV_EMAIL_OVERRIDE ?? to;
-    if (actualTo !== to) console.log("[email] DEV override: redirecting", to, "→", actualTo);
-    const { data, error } = await resend.emails.send({ from: FROM, to: actualTo, subject, html });
-    if (error) {
-      console.error("[email] Resend rejected:", JSON.stringify(error), "| to:", actualTo, "| from:", FROM);
-      return false;
-    }
-    console.log("[email] sent id:", data?.id, "| to:", actualTo, "| subject:", subject);
-    return true;
-  } catch (err) {
-    console.error("[email] send threw:", err, "| to:", to);
+    const { error } = await resend.emails.send({ from: FROM, to: actualTo, subject, html });
+    return !error;
+  } catch {
     return false;
   }
 }
@@ -205,6 +195,17 @@ export function emailTransactionCancelled(name: string, title: string) {
     ${h2("Transaction cancelled")}
     ${p(`Hi ${firstName(name)}, the escrow for <strong>${esc(title)}</strong> has been cancelled. No funds have been taken.`)}
     <p style="margin:24px 0 0;font-size:13px;color:#a8a29e;">If you have any questions, reply to this email or visit Vaultlify.</p>
+  `);
+}
+
+export function emailVerifyAccount(name: string, verifyUrl: string) {
+  return layout(`
+    ${h2("Verify your email address")}
+    ${p(`Hi ${firstName(name)}, thanks for signing up for Vaultlify!`)}
+    ${p("Click the button below to verify your email address and activate your account. You won't be able to sign in until your email is verified.")}
+    <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 24 hours.</p>
+    ${btn(verifyUrl, "Verify My Email →")}
+    <p style="margin:24px 0 0;font-size:12px;color:#a8a29e;">If you did not create a Vaultlify account, you can safely ignore this email.</p>
   `);
 }
 
