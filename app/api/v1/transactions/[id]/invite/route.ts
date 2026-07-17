@@ -11,7 +11,7 @@ const InviteSchema = z.object({
   role: z.enum(["BUYER", "SELLER"]),
   prefill: z.object({
     name: z.string().trim().optional(),
-    email: z.string().email().trim().toLowerCase().optional(),
+    email: z.email().trim().toLowerCase().optional(),
     phone: z.string().optional(),
   }).optional(),
 });

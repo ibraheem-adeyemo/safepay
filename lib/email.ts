@@ -18,23 +18,13 @@ export async function sendEmail({
   subject: string;
   html: string;
 }): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("[email] RESEND_API_KEY not set — skipping email to:", to);
-    return false;
-  }
+  if (!process.env.RESEND_API_KEY) return false;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const actualTo = process.env.DEV_EMAIL_OVERRIDE ?? to;
-    if (actualTo !== to) console.log("[email] DEV override: redirecting", to, "→", actualTo);
-    const { data, error } = await resend.emails.send({ from: FROM, to: actualTo, subject, html });
-    if (error) {
-      console.error("[email] Resend rejected:", JSON.stringify(error), "| to:", actualTo, "| from:", FROM);
-      return false;
-    }
-    console.log("[email] sent id:", data?.id, "| to:", actualTo, "| subject:", subject);
-    return true;
-  } catch (err) {
-    console.error("[email] send threw:", err, "| to:", to);
+    const { error } = await resend.emails.send({ from: FROM, to: actualTo, subject, html });
+    return !error;
+  } catch {
     return false;
   }
 }
