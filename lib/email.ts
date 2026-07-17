@@ -218,6 +218,79 @@ export function emailClaimAccount(name: string, claimUrl: string) {
   `);
 }
 
+export function emailMarketplaceBuyer(
+  buyerName: string,
+  productTitle: string,
+  amount: string,
+  platformName: string,
+  claimUrl: string
+) {
+  return layout(`
+    ${h2(`Complete your purchase of ${esc(productTitle)}`)}
+    ${p(`Hi ${firstName(buyerName)},`)}
+    ${p(`<strong>${esc(platformName)}</strong> has initiated a secure escrow transaction for your order. Here are the details:`)}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid #e7e5e4;border-radius:10px;overflow:hidden;">
+      <tr style="background:#f5f5f4;">
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Item</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">${esc(productTitle)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Amount</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">₦${esc(amount)}</td>
+      </tr>
+      <tr style="background:#f5f5f4;">
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Platform</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">${esc(platformName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Protected by</td>
+        <td style="padding:10px 16px;font-size:13px;color:#166534;font-weight:700;">🛡 Vaultlify Escrow</td>
+      </tr>
+    </table>
+    ${p(`Your payment is held safely in Vaultlify escrow. The seller only receives the money <strong>after you confirm you've received your item</strong> — so you're fully protected.`)}
+    ${p(`Set up your Vaultlify account to view payment instructions and complete the transaction:`)}
+    <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 48 hours.</p>
+    ${btn(claimUrl, "Set Up My Account & Continue →")}
+  `);
+}
+
+export function emailMarketplaceSeller(
+  sellerName: string,
+  buyerName: string,
+  productTitle: string,
+  amount: string,
+  platformName: string,
+  claimUrl: string
+) {
+  return layout(`
+    ${h2(`New order: ${esc(buyerName)} wants to buy ${esc(productTitle)}`)}
+    ${p(`Hi ${firstName(sellerName)},`)}
+    ${p(`You have a new order on <strong>${esc(platformName)}</strong>. The buyer's payment is being secured through Vaultlify escrow:`)}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid #e7e5e4;border-radius:10px;overflow:hidden;">
+      <tr style="background:#f5f5f4;">
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Buyer</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">${esc(buyerName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Item</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">${esc(productTitle)}</td>
+      </tr>
+      <tr style="background:#f5f5f4;">
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Amount</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">₦${esc(amount)}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 16px;font-size:13px;color:#78716c;font-weight:600;">Platform</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1c1917;font-weight:700;">${esc(platformName)}</td>
+      </tr>
+    </table>
+    ${p(`Once the buyer completes payment, Vaultlify holds the funds securely in escrow. You will receive payment only after the buyer confirms receipt of the item.`)}
+    ${p(`Set up your Vaultlify account to manage this order and track when payment is released:`)}
+    <p style="margin:8px 0 0;font-size:12px;color:#a8a29e;">This link expires in 48 hours.</p>
+    ${btn(claimUrl, "Set Up My Account & View Order →")}
+  `);
+}
+
 export function emailPasswordReset(name: string, resetUrl: string) {
   return layout(`
     ${h2("Reset your Vaultlify password")}
