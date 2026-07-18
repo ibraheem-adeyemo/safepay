@@ -69,7 +69,7 @@ export async function claimAccount(_state: ActionState, formData: FormData): Pro
 
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash, isClaimed: true, claimToken: null, claimTokenExp: null },
+    data: { passwordHash, isClaimed: true, emailVerified: true, claimToken: null, claimTokenExp: null },
   });
 
   await createSession({
@@ -178,7 +178,7 @@ export async function changePassword(_state: ActionState, formData: FormData): P
 const BusinessSchema = z.object({
   name: z.string().min(2, "Business name must be at least 2 characters.").trim(),
   description: z.string().max(500).optional(),
-  website: z.string().url("Enter a valid URL (e.g. https://example.com)").optional().or(z.literal("")),
+  website: z.url("Enter a valid URL (e.g. https://example.com)").optional().or(z.literal("")),
 });
 
 export async function updateBusinessProfile(_state: ActionState, formData: FormData): Promise<ActionState> {
@@ -280,7 +280,7 @@ const VALID_EVENTS = [
 ];
 
 const WebhookSchema = z.object({
-  url: z.string().url("Enter a valid HTTPS URL.").refine((u) => u.startsWith("https://"), "Webhook URL must use HTTPS."),
+  url: z.url("Enter a valid HTTPS URL.").refine((u) => u.startsWith("https://"), "Webhook URL must use HTTPS."),
   events: z.array(z.string()).min(1, "Select at least one event."),
 });
 

@@ -21,7 +21,7 @@ export default async function AdminLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-lg font-black text-emerald-800 tracking-tight">
-              Safe<span className="text-amber-500">Pay</span>
+              Vault<span className="text-amber-500">lify</span>
             </span>
             <span className="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               ADMIN

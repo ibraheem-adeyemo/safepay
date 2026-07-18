@@ -35,7 +35,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-emerald-700 rounded-lg flex items-center justify-center text-white text-xs font-black">SP</div>
+            <div className="w-8 h-8 bg-emerald-700 rounded-lg flex items-center justify-center text-white text-xs font-black">VL</div>
             <span className="font-black text-stone-800 text-lg tracking-tight">
               Vault<span className="text-emerald-700">lify</span>
             </span>
@@ -346,8 +346,8 @@ console.log(invite.data.shareUrl);
             <div className="grid sm:grid-cols-3 gap-8 mb-10">
               <div>
                 <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-7 h-7 bg-emerald-700 rounded-md flex items-center justify-center text-white text-xs font-black">SP</div>
-                  <span className="text-white font-black tracking-tight">Safe<span className="text-emerald-500">Pay</span></span>
+                  <div className="w-7 h-7 bg-emerald-700 rounded-md flex items-center justify-center text-white text-xs font-black">VL</div>
+                  <span className="text-white font-black tracking-tight">Vault<span className="text-emerald-500">lify</span></span>
                 </div>
                 <p className="text-stone-500 text-sm leading-relaxed">
                   Secure escrow for Nigerian buyers and sellers. Both sides protected, every time.
