@@ -39,7 +39,7 @@ export default async function AppLayout({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="text-lg font-black text-emerald-800 tracking-tight">
-              Safe<span className="text-amber-500">Pay</span>
+              Vault<span className="text-amber-500">lify</span>
             </span>
           </Link>
 

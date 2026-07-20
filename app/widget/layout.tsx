@@ -6,7 +6,7 @@ export default function WidgetLayout({ children }: { children: React.ReactNode }
         <p className="text-xs text-stone-400">
           Secured by{" "}
           <span className="font-black text-emerald-800">
-            Safe<span className="text-amber-500">Pay</span>
+            Vault<span className="text-amber-500">lify</span>
           </span>
         </p>
       </div>

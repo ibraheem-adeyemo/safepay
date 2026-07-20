@@ -103,7 +103,7 @@ export async function createTransaction(
 
 const AcceptSchema = z.object({
   name: z.string().min(2, "Enter your full name.").trim(),
-  email: z.string().email("Enter a valid email address.").trim().toLowerCase(),
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
   phone: z
     .string()
     .regex(/^\+?[0-9]{7,15}$/, "Enter a valid phone number.")

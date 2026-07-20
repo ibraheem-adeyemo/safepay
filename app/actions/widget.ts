@@ -19,7 +19,7 @@ import { z } from "zod";
 
 const AcceptSchema = z.object({
   name: z.string().min(2, "Enter your full name.").trim(),
-  email: z.string().email("Enter a valid email address.").trim().toLowerCase(),
+  email: z.email("Enter a valid email address.").trim().toLowerCase(),
   phone: z
     .string()
     .regex(/^\+?[0-9]{7,15}$/, "Enter a valid phone number.")
@@ -339,20 +339,19 @@ export async function resendClaimEmail(
   const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
   if (!email) return { message: "Please enter your email address." };
 
-  // Rate limited: 3 per email per hour (reuses the password-reset bucket)
   const allowed = await checkPasswordResetRateLimit(email);
   if (!allowed) {
     return { message: "Too many requests. Please wait a moment before trying again." };
   }
   await recordPasswordResetAttempt(email);
 
-  // Only send if the email belongs to an unclaimed party on this transaction.
-  // Always return a generic success — don't let callers enumerate party emails.
   const user = await db.user.findUnique({ where: { email } });
+
   if (user && !user.isClaimed) {
     const isParty = await db.transactionParty.findFirst({
       where: { transactionId: txnId, userId: user.id },
     });
+
     if (isParty) {
       const claimToken = randomBytes(32).toString("hex");
       const claimTokenExp = new Date(Date.now() + 48 * 60 * 60 * 1000);
