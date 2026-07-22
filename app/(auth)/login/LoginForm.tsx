@@ -11,9 +11,16 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const emailHint = searchParams.get("email") ?? "";
   const fromWidget = searchParams.get("hint") === "widget";
+  const justVerified = searchParams.get("verified") === "1";
 
   return (
     <>
+      {justVerified && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 font-medium mb-4">
+          ✅ Email verified! You can now sign in.
+        </div>
+      )}
+
       {fromWidget && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-4">
           You already have a Vaultlify account with this email. Sign in to accept the transaction.
@@ -21,11 +28,29 @@ export default function LoginForm() {
       )}
 
       <form action={formAction} className="space-y-4">
-        {state?.message && (
+        {/* Unverified email — show targeted resend option instead of a dead-end message */}
+        {state?.needsVerification ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            <p className="font-semibold mb-1">Email not verified</p>
+            <p className="mb-2">
+              Check your inbox for a verification link, or request a new one.
+            </p>
+            <Link
+              href={
+                state.verificationEmail
+                  ? `/resend-verification?email=${encodeURIComponent(state.verificationEmail)}`
+                  : "/resend-verification"
+              }
+              className="inline-block bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-colors"
+            >
+              Resend verification email →
+            </Link>
+          </div>
+        ) : state?.message ? (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
             {state.message}
           </div>
-        )}
+        ) : null}
 
         <div>
           <label htmlFor="email" className="block text-sm font-semibold text-stone-700 mb-1.5">

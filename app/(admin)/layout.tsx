@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }) {
   const session = await getSession();
 
-  if (!session) redirect("/login");
+  if (!session) redirect("/api/auth/clear-session");
   if (session.accountType !== "ADMIN" && session.accountType !== "SUPER_ADMIN") {
     redirect("/dashboard");
   }

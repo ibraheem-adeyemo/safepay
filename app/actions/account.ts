@@ -406,7 +406,7 @@ export async function resetPassword(_state: ActionState, formData: FormData): Pr
 
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash, isClaimed: true, resetToken: null, resetTokenExp: null, passwordChangedAt: new Date() },
+    data: { passwordHash, isClaimed: true, emailVerified: true, resetToken: null, resetTokenExp: null, passwordChangedAt: new Date() },
   });
 
   await createSession({

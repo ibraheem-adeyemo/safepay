@@ -1,10 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { hashToken } from "@/lib/token";
 import { notifyParties } from "@/lib/notifications";
+import { sendEmail, emailPasswordReset, emailClaimAccount } from "@/lib/email";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -232,4 +235,89 @@ export async function adminUpdateFeeConfig(
   }
 
   return { success: true, message: "Fee configuration updated." };
+}
+
+// ─── User Management ──────────────────────────────────────────────────────────
+
+async function requireSuperAdmin() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.accountType !== "SUPER_ADMIN") redirect("/admin/users");
+  return session;
+}
+
+export async function adminSuspendUser(userId: string, _formData: FormData): Promise<void> {
+  await requireAdmin();
+  const user = await db.user.findUnique({ where: { id: userId }, select: { accountType: true } });
+  if (!user || user.accountType === "SUPER_ADMIN") redirect(`/admin/users/${userId}?error=forbidden`);
+  await db.user.update({ where: { id: userId }, data: { accountStatus: "SUSPENDED" } });
+  redirect(`/admin/users/${userId}?success=suspended`);
+}
+
+export async function adminActivateUser(userId: string, _formData: FormData): Promise<void> {
+  await requireAdmin();
+  await db.user.update({ where: { id: userId }, data: { accountStatus: "ACTIVE" } });
+  redirect(`/admin/users/${userId}?success=activated`);
+}
+
+export async function adminPromoteUser(userId: string, _formData: FormData): Promise<void> {
+  await requireSuperAdmin();
+  const user = await db.user.findUnique({ where: { id: userId }, select: { accountType: true } });
+  if (!user || user.accountType === "SUPER_ADMIN" || user.accountType === "ADMIN") {
+    redirect(`/admin/users/${userId}?error=forbidden`);
+  }
+  await db.user.update({ where: { id: userId }, data: { accountType: "ADMIN" } });
+  redirect(`/admin/users/${userId}?success=promoted`);
+}
+
+export async function adminDemoteUser(userId: string, _formData: FormData): Promise<void> {
+  await requireSuperAdmin();
+  const user = await db.user.findUnique({ where: { id: userId }, select: { accountType: true } });
+  if (!user || user.accountType !== "ADMIN") redirect(`/admin/users/${userId}?error=forbidden`);
+  await db.user.update({ where: { id: userId }, data: { accountType: "PERSONAL" } });
+  redirect(`/admin/users/${userId}?success=demoted`);
+}
+
+export async function adminSendPasswordReset(userId: string, _formData: FormData): Promise<void> {
+  await requireAdmin();
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, isClaimed: true },
+  });
+  if (!user || !user.email) redirect(`/admin/users/${userId}?error=no_email`);
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+  const token = randomBytes(32).toString("hex");
+  await db.user.update({
+    where: { id: userId },
+    data: { resetToken: hashToken(token), resetTokenExp: new Date(Date.now() + 60 * 60 * 1000) },
+  });
+  await sendEmail({
+    to: user!.email!,
+    subject: "Reset your Vaultlify password",
+    html: emailPasswordReset(user!.name, `${base}/claim/reset?token=${token}`),
+  });
+  redirect(`/admin/users/${userId}?success=reset_sent`);
+}
+
+export async function adminResendClaimEmail(userId: string, _formData: FormData): Promise<void> {
+  await requireAdmin();
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, isClaimed: true },
+  });
+  if (!user || user.isClaimed || !user.email) redirect(`/admin/users/${userId}?error=not_shadow`);
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+  const token = randomBytes(32).toString("hex");
+  await db.user.update({
+    where: { id: userId },
+    data: { claimToken: hashToken(token), claimTokenExp: new Date(Date.now() + 48 * 60 * 60 * 1000) },
+  });
+  await sendEmail({
+    to: user!.email!,
+    subject: "Secure your Vaultlify account",
+    html: emailClaimAccount(user!.name, `${base}/claim?token=${token}`),
+  });
+  redirect(`/admin/users/${userId}?success=claim_sent`);
 }
