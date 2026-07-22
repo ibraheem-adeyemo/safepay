@@ -6,7 +6,6 @@ export const RegisterSchema = z.object({
     .min(2, { message: "Name must be at least 2 characters." })
     .trim(),
   email: z
-    .string()
     .email({ message: "Please enter a valid email address." })
     .trim()
     .toLowerCase(),
@@ -30,7 +29,6 @@ export type RegisterInput = z.infer<typeof RegisterSchema>;
 
 export const LoginSchema = z.object({
   email: z
-    .string()
     .email({ message: "Enter a valid email address." })
     .trim()
     .toLowerCase(),
@@ -43,5 +41,7 @@ export type AuthActionState =
   | {
       errors?: Record<string, string[]>;
       message?: string;
+      needsVerification?: boolean;
+      verificationEmail?: string;
     }
   | undefined;

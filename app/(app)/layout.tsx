@@ -11,7 +11,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) redirect("/api/auth/clear-session");
 
   const user = await db.user.findUnique({
     where: { id: session.userId },
