@@ -111,8 +111,11 @@ export const STATUS_META: Record<
   IN_PROGRESS:       { label: "Delivery in progress",  colour: "text-blue-700",   bg: "bg-blue-100" },
   DELIVERED:         { label: "Delivered — confirm?",  colour: "text-indigo-700", bg: "bg-indigo-100" },
   UNDER_INSPECTION:  { label: "Under inspection",      colour: "text-purple-700", bg: "bg-purple-100" },
+  RECEIPT_CONFIRMED: { label: "Receipt confirmed — payout pending", colour: "text-teal-700", bg: "bg-teal-100" },
   COMPLETED:         { label: "Completed",             colour: "text-emerald-700",bg: "bg-emerald-50" },
   DISPUTED:          { label: "Disputed",              colour: "text-red-700",    bg: "bg-red-100" },
+  PENDING_DISBURSEMENT_APPROVAL: { label: "Awaiting buyer approval",  colour: "text-amber-700", bg: "bg-amber-100" },
+  PENDING_REFUND_APPROVAL:       { label: "Awaiting seller approval", colour: "text-amber-700", bg: "bg-amber-100" },
   REFUNDED:          { label: "Refunded",              colour: "text-orange-700", bg: "bg-orange-100" },
   CANCELLED:         { label: "Cancelled",             colour: "text-stone-400",  bg: "bg-stone-100" },
 };

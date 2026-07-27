@@ -36,8 +36,11 @@ enum TransactionStatus {
   IN_PROGRESS
   DELIVERED
   UNDER_INSPECTION
+  RECEIPT_CONFIRMED
   COMPLETED
   DISPUTED
+  PENDING_DISBURSEMENT_APPROVAL
+  PENDING_REFUND_APPROVAL
   REFUNDED
   CANCELLED
 }
@@ -77,6 +80,12 @@ enum NotificationType {
   DISPUTE_RAISED
   DISPUTE_RESOLVED
   ACCOUNT_CLAIMED
+  DISBURSEMENT_APPROVAL_REQUESTED
+  REFUND_APPROVAL_REQUESTED
+  DISBURSEMENT_DECLINED
+  REFUND_DECLINED
+  TRANSACTION_REFUNDED
+  RECEIPT_CONFIRMED
 }
 
 // ─── User & Identity ──────────────────────────────────────────────────────────
@@ -195,6 +204,19 @@ model Transaction {
 
   adminNote String?
   expiresAt DateTime?
+
+  // Approval-gate on admin-initiated disbursement/refund — set when admin requests
+  // buyer/seller sign-off, cleared once approved, reverted-from on decline.
+  statusBeforeApproval  TransactionStatus?
+  approvalRequestedAt   DateTime?
+  approvalRequestedById String?
+  approvalNote          String?
+  approvalDeclinedAt    DateTime?
+  approvalDeclineNote   String?
+  approvalDeclineCount  Int       @default(0)
+  forcedApprovalAt      DateTime?
+  forcedApprovalById    String?
+  forcedApprovalNote    String?
 
   // Set when a platform (business API key holder) creates a transaction on behalf
   // of two of their own users. The platform is NOT a TransactionParty but still

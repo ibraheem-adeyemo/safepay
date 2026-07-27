@@ -31,8 +31,11 @@ const TXN_STATUS_COLORS: Record<string, string> = {
   IN_PROGRESS:       "bg-blue-100 text-blue-700",
   DELIVERED:         "bg-violet-100 text-violet-700",
   UNDER_INSPECTION:  "bg-orange-100 text-orange-700",
+  RECEIPT_CONFIRMED: "bg-teal-100 text-teal-700",
   COMPLETED:         "bg-emerald-100 text-emerald-700",
   DISPUTED:          "bg-red-100 text-red-700",
+  PENDING_DISBURSEMENT_APPROVAL: "bg-amber-100 text-amber-700",
+  PENDING_REFUND_APPROVAL:       "bg-amber-100 text-amber-700",
   REFUNDED:          "bg-pink-100 text-pink-700",
   CANCELLED:         "bg-stone-100 text-stone-500",
 };

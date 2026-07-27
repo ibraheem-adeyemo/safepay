@@ -6,7 +6,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { hashToken } from "@/lib/token";
-import { notifyParties } from "@/lib/notifications";
+import { notifyParties, notifyApprovalRequested, notifyTransactionRefunded } from "@/lib/notifications";
+import { dispatchWebhooks } from "@/lib/webhooks";
 import { sendEmail, emailPasswordReset, emailClaimAccount } from "@/lib/email";
 
 async function requireAdmin() {
@@ -65,32 +66,104 @@ export async function adminConfirmPayment(txnId: string, formData: FormData): Pr
 }
 
 // ─── Mark Refunded ────────────────────────────────────────────────────────────
+// Doesn't refund directly — requests the seller's approval first, since they're
+// the one giving up their claim to the funds.
 
 export async function adminMarkRefunded(txnId: string, formData: FormData): Promise<void> {
   const session = await requireAdmin();
-  const note = (formData.get("note") as string)?.trim() || "Refunded by admin";
+  const note = (formData.get("note") as string)?.trim();
+  if (!note) redirect(`/admin/transactions/${txnId}?error=note_required`);
 
-  const refundable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "DISPUTED"];
-  const transaction = await db.transaction.findUnique({ where: { id: txnId } });
+  const refundable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED", "DISPUTED"];
+  const transaction = await db.transaction.findUnique({
+    where: { id: txnId },
+    include: { parties: { where: { role: "SELLER" } } },
+  });
   if (!transaction || !refundable.includes(transaction.status)) {
     redirect(`/admin/transactions/${txnId}?error=wrong_status`);
   }
 
+  const seller = transaction!.parties[0];
+  if (!seller) redirect(`/admin/transactions/${txnId}?error=no_seller`);
+
   await db.transaction.update({
     where: { id: txnId },
     data: {
-      status: "REFUNDED",
-      adminNote: note,
+      status: "PENDING_REFUND_APPROVAL",
+      statusBeforeApproval: transaction!.status,
+      approvalRequestedAt: new Date(),
+      approvalRequestedById: session.userId,
+      approvalNote: note,
       statusLogs: {
         create: {
-          fromStatus: transaction.status,
-          toStatus: "REFUNDED",
+          fromStatus: transaction!.status,
+          toStatus: "PENDING_REFUND_APPROVAL",
           actorId: session.userId,
-          note,
+          note: `Admin requested seller approval to refund: ${note}`,
         },
       },
     },
   });
+
+  await notifyApprovalRequested(
+    seller!.userId,
+    "REFUND_APPROVAL_REQUESTED",
+    transaction!.title,
+    note,
+    txnId
+  );
+
+  redirect(`/admin/transactions/${txnId}`);
+}
+
+// ─── Initiate Disbursement ────────────────────────────────────────────────────
+// Standalone counterpart to Mark Refunded — requests the buyer's approval to
+// release funds to the seller, available any time funds are in escrow (not
+// just once a dispute exists).
+
+export async function adminInitiateDisbursement(txnId: string, formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const note = (formData.get("note") as string)?.trim();
+  if (!note) redirect(`/admin/transactions/${txnId}?error=note_required`);
+
+  const disbursable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED", "DISPUTED"];
+  const transaction = await db.transaction.findUnique({
+    where: { id: txnId },
+    include: { parties: { where: { role: "BUYER" } } },
+  });
+  if (!transaction || !disbursable.includes(transaction.status)) {
+    redirect(`/admin/transactions/${txnId}?error=wrong_status`);
+  }
+
+  const buyer = transaction!.parties[0];
+  if (!buyer) redirect(`/admin/transactions/${txnId}?error=no_buyer`);
+
+  await db.transaction.update({
+    where: { id: txnId },
+    data: {
+      status: "PENDING_DISBURSEMENT_APPROVAL",
+      statusBeforeApproval: transaction!.status,
+      approvalRequestedAt: new Date(),
+      approvalRequestedById: session.userId,
+      approvalNote: note,
+      statusLogs: {
+        create: {
+          fromStatus: transaction!.status,
+          toStatus: "PENDING_DISBURSEMENT_APPROVAL",
+          actorId: session.userId,
+          note: `Admin requested buyer approval to release funds: ${note}`,
+        },
+      },
+    },
+  });
+
+  await notifyApprovalRequested(
+    buyer!.userId,
+    "DISBURSEMENT_APPROVAL_REQUESTED",
+    transaction!.title,
+    note,
+    txnId
+  );
 
   redirect(`/admin/transactions/${txnId}`);
 }
@@ -127,6 +200,9 @@ export async function adminCancelTransaction(txnId: string, formData: FormData):
 }
 
 // ─── Resolve Dispute ──────────────────────────────────────────────────────────
+// Doesn't resolve directly — requests approval from whichever party stands to
+// lose their claim to the funds (buyer for a release, seller for a refund).
+// The dispute itself stays open until that party approves.
 
 export async function adminResolveDispute(txnId: string, formData: FormData): Promise<void> {
   const session = await requireAdmin();
@@ -139,53 +215,119 @@ export async function adminResolveDispute(txnId: string, formData: FormData): Pr
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },
-    include: {
-      disputes: {
-        where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },
-        take: 1,
-      },
-    },
+    include: { parties: true },
   });
 
   if (!transaction || transaction.status !== "DISPUTED") {
     redirect(`/admin/transactions/${txnId}?error=wrong_status`);
   }
 
-  const dispute = transaction.disputes[0];
+  const targetRole = outcome === "COMPLETED" ? "BUYER" : "SELLER";
+  const targetParty = transaction!.parties.find((p) => p.role === targetRole);
+  if (!targetParty) redirect(`/admin/transactions/${txnId}?error=no_${targetRole.toLowerCase()}`);
+
+  const pendingStatus = outcome === "COMPLETED" ? "PENDING_DISBURSEMENT_APPROVAL" : "PENDING_REFUND_APPROVAL";
+  const notifType = outcome === "COMPLETED" ? "DISBURSEMENT_APPROVAL_REQUESTED" : "REFUND_APPROVAL_REQUESTED";
+
+  await db.transaction.update({
+    where: { id: txnId },
+    data: {
+      status: pendingStatus,
+      statusBeforeApproval: "DISPUTED",
+      approvalRequestedAt: new Date(),
+      approvalRequestedById: session.userId,
+      approvalNote: resolution,
+      statusLogs: {
+        create: {
+          fromStatus: "DISPUTED",
+          toStatus: pendingStatus,
+          actorId: session.userId,
+          note: `Admin requested ${targetRole.toLowerCase()} approval to ${
+            outcome === "COMPLETED" ? "release funds" : "refund"
+          }: ${resolution}`,
+        },
+      },
+    },
+  });
+
+  await notifyApprovalRequested(targetParty!.userId, notifType, transaction!.title, resolution, txnId);
+
+  redirect(`/admin/transactions/${txnId}`);
+}
+
+// ─── Force Approval Outcome (super admin override) ───────────────────────────
+// Last-resort escape hatch for a stuck PENDING_*_APPROVAL transaction — a party
+// declining repeatedly or never responding. Always logged and always notifies
+// both parties so the override is never silent.
+
+export async function adminForceApprovalOutcome(txnId: string, formData: FormData): Promise<void> {
+  const session = await requireSuperAdmin();
+  const note = (formData.get("note") as string)?.trim();
+  if (!note) redirect(`/admin/transactions/${txnId}?error=note_required`);
+
+  const transaction = await db.transaction.findUnique({
+    where: { id: txnId },
+    include: {
+      disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } }, take: 1 },
+    },
+  });
+
+  const pendingStatuses = ["PENDING_DISBURSEMENT_APPROVAL", "PENDING_REFUND_APPROVAL"];
+  if (!transaction || !pendingStatuses.includes(transaction.status)) {
+    redirect(`/admin/transactions/${txnId}?error=wrong_status`);
+  }
+
+  const outcome = transaction!.status === "PENDING_DISBURSEMENT_APPROVAL" ? "COMPLETED" : "REFUNDED";
+  const dispute = transaction!.disputes[0];
 
   if (dispute) {
     await db.dispute.update({
       where: { id: dispute.id },
       data: {
         status: "RESOLVED",
-        resolution,
+        resolution: transaction!.approvalNote,
         resolvedAt: new Date(),
         resolvedById: session.userId,
       },
     });
   }
+
   await db.transaction.update({
     where: { id: txnId },
     data: {
-      status: outcome as "COMPLETED" | "REFUNDED",
-      adminNote: resolution,
+      status: outcome,
+      adminNote: note,
+      statusBeforeApproval: null,
+      approvalRequestedAt: null,
+      approvalRequestedById: null,
+      approvalNote: null,
+      forcedApprovalAt: new Date(),
+      forcedApprovalById: session.userId,
+      forcedApprovalNote: note,
       statusLogs: {
         create: {
-          fromStatus: "DISPUTED",
-          toStatus: outcome as "COMPLETED" | "REFUNDED",
+          fromStatus: transaction!.status,
+          toStatus: outcome,
           actorId: session.userId,
-          note: `Dispute resolved: ${resolution}`,
+          note: `Forced by super admin: ${note}`,
         },
       },
     },
   });
 
-  await notifyParties(
-    txnId,
-    "DISPUTE_RESOLVED",
-    "Dispute resolved",
-    `The dispute on "${transaction!.title}" has been resolved.`
-  );
+  if (outcome === "COMPLETED") {
+    await notifyParties(
+      txnId,
+      "TRANSACTION_COMPLETED",
+      "Transaction completed",
+      `A super admin has released payment on "${transaction!.title}". Reason: ${note}`
+    );
+    await dispatchWebhooks(txnId, "transaction.completed", {
+      transaction: { id: txnId, title: transaction!.title, status: "COMPLETED" },
+    });
+  } else {
+    await notifyTransactionRefunded(txnId, transaction!.title, transaction!.amount.toString());
+  }
 
   redirect(`/admin/transactions/${txnId}`);
 }

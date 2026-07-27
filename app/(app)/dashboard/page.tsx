@@ -15,7 +15,10 @@ export default async function DashboardPage() {
         userId: session.userId,
         transaction: {
           status: {
-            in: ["CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"],
+            in: [
+              "CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION",
+              "RECEIPT_CONFIRMED", "PENDING_DISBURSEMENT_APPROVAL", "PENDING_REFUND_APPROVAL",
+            ],
           },
         },
       },
