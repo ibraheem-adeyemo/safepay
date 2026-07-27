@@ -11,8 +11,11 @@ const ALL_STATUSES: TransactionStatus[] = [
   "IN_PROGRESS",
   "DELIVERED",
   "UNDER_INSPECTION",
+  "RECEIPT_CONFIRMED",
   "COMPLETED",
   "DISPUTED",
+  "PENDING_DISBURSEMENT_APPROVAL",
+  "PENDING_REFUND_APPROVAL",
   "REFUNDED",
   "CANCELLED",
 ];
@@ -22,6 +25,8 @@ const TAB_LABELS: Partial<Record<TransactionStatus | "ALL", string>> = {
   AWAITING_PAYMENT: "Pending Payment",
   DISPUTED: "Disputed",
   FUNDED: "Funded",
+  PENDING_DISBURSEMENT_APPROVAL: "Awaiting Buyer",
+  PENDING_REFUND_APPROVAL: "Awaiting Seller",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
@@ -44,7 +49,16 @@ export default async function AdminTransactionsPage({
     take: 100,
   });
 
-  const tabs = ["ALL", "AWAITING_PAYMENT", "DISPUTED", "FUNDED", "COMPLETED", "CANCELLED"] as const;
+  const tabs = [
+    "ALL",
+    "AWAITING_PAYMENT",
+    "DISPUTED",
+    "FUNDED",
+    "PENDING_DISBURSEMENT_APPROVAL",
+    "PENDING_REFUND_APPROVAL",
+    "COMPLETED",
+    "CANCELLED",
+  ] as const;
 
   return (
     <div>

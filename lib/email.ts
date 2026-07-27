@@ -161,6 +161,18 @@ export function emailItemDelivered(
   `);
 }
 
+export function emailReceiptConfirmed(
+  name: string,
+  title: string,
+  txnId: string
+) {
+  return layout(`
+    ${h2("Buyer confirmed receipt ✅")}
+    ${p(`Hi ${firstName(name)}, the buyer has confirmed receipt of <strong>${esc(title)}</strong>. Your payout hasn't been requested yet — we'll notify you as soon as it is.`)}
+    ${btn(txnUrl(txnId), "View Transaction")}
+  `);
+}
+
 export function emailTransactionCompleted(
   name: string,
   title: string,
@@ -204,6 +216,52 @@ export function emailTransactionCancelled(name: string, title: string) {
     ${h2("Transaction cancelled")}
     ${p(`Hi ${firstName(name)}, the escrow for <strong>${esc(title)}</strong> has been cancelled. No funds have been taken.`)}
     <p style="margin:24px 0 0;font-size:13px;color:#a8a29e;">If you have any questions, reply to this email or visit Vaultlify.</p>
+  `);
+}
+
+export function emailApprovalRequested(
+  name: string,
+  title: string,
+  kind: "disbursement" | "refund",
+  note: string,
+  txnId: string
+) {
+  const action = kind === "disbursement" ? "release the funds to the seller" : "refund the funds to the buyer";
+  return layout(`
+    ${h2("Your approval is needed 🔔")}
+    ${p(`Hi ${firstName(name)}, our team has reviewed <strong>${esc(title)}</strong> and would like to ${action}.`)}
+    ${p(`Reason given: <em>${esc(note)}</em>`)}
+    ${p(`Nothing happens until you respond — review the details and approve or decline.`)}
+    ${btn(txnUrl(txnId), "Review Request")}
+  `);
+}
+
+export function emailApprovalDeclined(
+  name: string,
+  title: string,
+  kind: "disbursement" | "refund",
+  declineNote: string,
+  txnId: string
+) {
+  const who = kind === "disbursement" ? "buyer" : "seller";
+  return layout(`
+    ${h2("Approval request declined")}
+    ${p(`Hi ${firstName(name)}, the ${who} declined the ${kind} request on <strong>${esc(title)}</strong>.`)}
+    ${p(`Reason given: <em>${esc(declineNote)}</em>`)}
+    ${btn(txnUrl(txnId), "View Transaction")}
+  `);
+}
+
+export function emailTransactionRefunded(
+  name: string,
+  title: string,
+  amount: string,
+  txnId: string
+) {
+  return layout(`
+    ${h2("Refund issued ✅")}
+    ${p(`Hi ${firstName(name)}, a refund of ₦${esc(amount)} for <strong>${esc(title)}</strong> has been issued to you.`)}
+    ${btn(txnUrl(txnId), "View Transaction")}
   `);
 }
 

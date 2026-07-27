@@ -19,6 +19,7 @@ import { sendEmail, emailClaimAccount } from "@/lib/email";
 import { randomBytes } from "crypto";
 import { hashToken } from "@/lib/token";
 import { formatAmount } from "@/lib/transaction/helpers";
+import { dispatchWebhooks } from "@/lib/webhooks";
 
 type ActionState = { errors?: Record<string, string[]>; message?: string } | undefined;
 type Party = { role: string; userId: string; isInitiator: boolean };
@@ -430,13 +431,13 @@ export async function confirmReceipt(txnId: string): Promise<void> {
   await db.transaction.update({
     where: { id: txnId },
     data: {
-      status: "COMPLETED",
+      status: "RECEIPT_CONFIRMED",
       statusLogs: {
         create: {
           fromStatus: transaction.status,
-          toStatus: "COMPLETED",
+          toStatus: "RECEIPT_CONFIRMED",
           actorId: session.userId,
-          note: "Buyer confirmed receipt — payment will be released to seller",
+          note: "Buyer confirmed receipt — payout not yet requested",
         },
       },
     },
@@ -445,11 +446,67 @@ export async function confirmReceipt(txnId: string): Promise<void> {
   // Notify the seller (all parties except buyer)
   await notifyParties(
     txnId,
-    "TRANSACTION_COMPLETED",
-    "Transaction completed",
-    `The buyer confirmed receipt of "${transaction.title}". Payment will be released to you.`,
+    "RECEIPT_CONFIRMED",
+    "Buyer confirmed receipt",
+    `The buyer confirmed receipt of "${transaction.title}". Your payout hasn't been requested yet.`,
     session.userId
   );
+
+  redirect(`/dashboard/transactions/${txnId}`);
+}
+
+// ─── Request Payout (buyer) ───────────────────────────────────────────────────
+// Separate, explicit step after confirming receipt — this is the action that
+// actually releases the escrowed funds to the seller.
+
+export async function requestPayout(txnId: string): Promise<void> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const transaction = await db.transaction.findUnique({
+    where: { id: txnId },
+    include: { parties: { where: { userId: session.userId } } },
+  });
+
+  if (!transaction || transaction.parties.length === 0) {
+    redirect(`/dashboard/transactions/${txnId}?error=not_found`);
+  }
+
+  const party = transaction!.parties[0];
+  if (party.role !== "BUYER") {
+    redirect(`/dashboard/transactions/${txnId}?error=wrong_role`);
+  }
+
+  if (transaction!.status !== "RECEIPT_CONFIRMED") {
+    redirect(`/dashboard/transactions/${txnId}?error=wrong_status`);
+  }
+
+  await db.transaction.update({
+    where: { id: txnId },
+    data: {
+      status: "COMPLETED",
+      statusLogs: {
+        create: {
+          fromStatus: "RECEIPT_CONFIRMED",
+          toStatus: "COMPLETED",
+          actorId: session.userId,
+          note: "Buyer requested payout — payment released to seller",
+        },
+      },
+    },
+  });
+
+  await notifyParties(
+    txnId,
+    "TRANSACTION_COMPLETED",
+    "Transaction completed",
+    `The buyer requested payout for "${transaction!.title}". Payment will be released to you.`,
+    session.userId
+  );
+
+  await dispatchWebhooks(txnId, "transaction.completed", {
+    transaction: { id: txnId, title: transaction!.title, status: "COMPLETED" },
+  });
 
   redirect(`/dashboard/transactions/${txnId}`);
 }
@@ -469,7 +526,7 @@ export async function raiseDispute(
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const disputeable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"];
+  const disputeable = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED"];
 
   const transaction = await db.transaction.findUnique({
     where: { id: txnId },

@@ -9,7 +9,10 @@ const FILTERS: { label: string; statuses: TransactionStatus[] | "all" }[] = [
   { label: "All", statuses: "all" },
   {
     label: "Active",
-    statuses: ["CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"],
+    statuses: [
+      "CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION",
+      "RECEIPT_CONFIRMED", "PENDING_DISBURSEMENT_APPROVAL", "PENDING_REFUND_APPROVAL",
+    ],
   },
   { label: "Completed", statuses: ["COMPLETED"] },
   { label: "Cancelled", statuses: ["CANCELLED", "REFUNDED"] },

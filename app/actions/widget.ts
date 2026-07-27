@@ -301,13 +301,13 @@ export async function widgetConfirmReceipt(txnId: string): Promise<void> {
   await db.transaction.update({
     where: { id: txnId },
     data: {
-      status: "COMPLETED",
+      status: "RECEIPT_CONFIRMED",
       statusLogs: {
         create: {
           fromStatus: transaction!.status,
-          toStatus: "COMPLETED",
+          toStatus: "RECEIPT_CONFIRMED",
           actorId: session!.userId,
-          note: "Buyer confirmed receipt via widget",
+          note: "Buyer confirmed receipt via widget — payout not yet requested",
         },
       },
     },
@@ -315,14 +315,11 @@ export async function widgetConfirmReceipt(txnId: string): Promise<void> {
 
   await notifyParties(
     txnId,
-    "TRANSACTION_COMPLETED",
-    "Transaction completed",
-    `The buyer confirmed receipt of "${transaction!.title}". Payment will be released to you.`,
+    "RECEIPT_CONFIRMED",
+    "Buyer confirmed receipt",
+    `The buyer confirmed receipt of "${transaction!.title}". Your payout hasn't been requested yet.`,
     session!.userId
   );
-  await dispatchWebhooks(txnId, "transaction.completed", {
-    transaction: { id: txnId, title: transaction!.title, status: "COMPLETED" },
-  });
 
   redirect(`/widget/${txnId}`);
 }

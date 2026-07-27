@@ -10,7 +10,19 @@ export default async function AdminPage() {
     await Promise.all([
       db.transaction.count(),
       db.transaction.count({
-        where: { status: { in: ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"] } },
+        where: {
+          status: {
+            in: [
+              "FUNDED",
+              "IN_PROGRESS",
+              "DELIVERED",
+              "UNDER_INSPECTION",
+              "RECEIPT_CONFIRMED",
+              "PENDING_DISBURSEMENT_APPROVAL",
+              "PENDING_REFUND_APPROVAL",
+            ],
+          },
+        },
       }),
       db.transaction.count({ where: { status: "AWAITING_PAYMENT" } }),
       db.transaction.count({ where: { status: "DISPUTED" } }),

@@ -10,6 +10,10 @@ import {
   emailDisputeRaised,
   emailDisputeResolved,
   emailTransactionCancelled,
+  emailApprovalRequested,
+  emailApprovalDeclined,
+  emailTransactionRefunded,
+  emailReceiptConfirmed,
 } from "@/lib/email";
 
 type NotificationType =
@@ -22,7 +26,13 @@ type NotificationType =
   | "PAYMENT_CONFIRMED"
   | "DISPUTE_RAISED"
   | "DISPUTE_RESOLVED"
-  | "ACCOUNT_CLAIMED";
+  | "ACCOUNT_CLAIMED"
+  | "DISBURSEMENT_APPROVAL_REQUESTED"
+  | "REFUND_APPROVAL_REQUESTED"
+  | "DISBURSEMENT_DECLINED"
+  | "REFUND_DECLINED"
+  | "TRANSACTION_REFUNDED"
+  | "RECEIPT_CONFIRMED";
 
 // Map notification type + context to the right email template HTML.
 // Returns null when no email should be sent for that type.
@@ -48,6 +58,8 @@ function renderEmail(
         : null;
     case "TRANSACTION_DELIVERED":
       return txId ? emailItemDelivered(user.name, title, txId) : null;
+    case "RECEIPT_CONFIRMED":
+      return txId ? emailReceiptConfirmed(user.name, title, txId) : null;
     case "TRANSACTION_COMPLETED":
       return txId ? emailTransactionCompleted(user.name, title, "", txId) : null;
     case "DISPUTE_RAISED":
@@ -198,6 +210,120 @@ export async function notifyCounterpartyJoined(
         html: emailCounterpartyJoined(user.name, counterpartyName, title, counterpartyRole, txnId),
       });
     }
+  } catch {
+    // Best-effort
+  }
+}
+
+// Notify a single party (the one being asked to give up their claim to the
+// funds) that admin has requested their approval before money moves.
+export async function notifyApprovalRequested(
+  targetUserId: string,
+  type: "DISBURSEMENT_APPROVAL_REQUESTED" | "REFUND_APPROVAL_REQUESTED",
+  title: string,
+  note: string,
+  txnId: string
+) {
+  try {
+    const kind = type === "DISBURSEMENT_APPROVAL_REQUESTED" ? "disbursement" : "refund";
+    const notifTitle =
+      kind === "disbursement"
+        ? "Your approval is needed to release funds"
+        : "Your approval is needed to issue a refund";
+    const body = `We'd like to ${
+      kind === "disbursement" ? "release funds to the seller" : "refund the buyer"
+    } for "${title}". Reason: ${note}`;
+
+    const [, user] = await Promise.all([
+      db.notification.create({
+        data: { userId: targetUserId, type, title: notifTitle, body, transactionId: txnId },
+      }),
+      db.user.findUnique({ where: { id: targetUserId }, select: { email: true, name: true } }),
+    ]);
+
+    if (user?.email) {
+      await sendEmail({
+        to: user.email,
+        subject: notifTitle,
+        html: emailApprovalRequested(user.name, title, kind, note, txnId),
+      });
+    }
+  } catch {
+    // Best-effort
+  }
+}
+
+// Notify the admin who requested approval that the party declined.
+export async function notifyApprovalDeclined(
+  adminUserId: string,
+  type: "DISBURSEMENT_DECLINED" | "REFUND_DECLINED",
+  title: string,
+  declineNote: string,
+  txnId: string
+) {
+  try {
+    const kind = type === "DISBURSEMENT_DECLINED" ? "disbursement" : "refund";
+    const notifTitle = "Approval request declined";
+    const body = `The ${
+      kind === "disbursement" ? "buyer" : "seller"
+    } declined the ${kind} request on "${title}". Reason: ${declineNote}`;
+
+    const [, user] = await Promise.all([
+      db.notification.create({
+        data: { userId: adminUserId, type, title: notifTitle, body, transactionId: txnId },
+      }),
+      db.user.findUnique({ where: { id: adminUserId }, select: { email: true, name: true } }),
+    ]);
+
+    if (user?.email) {
+      await sendEmail({
+        to: user.email,
+        subject: notifTitle,
+        html: emailApprovalDeclined(user.name, title, kind, declineNote, txnId),
+      });
+    }
+  } catch {
+    // Best-effort
+  }
+}
+
+// Notify parties (excluding the approver) that a refund has been issued.
+export async function notifyTransactionRefunded(
+  txnId: string,
+  title: string,
+  amount: string,
+  excludeUserId?: string
+) {
+  try {
+    const parties = await db.transactionParty.findMany({
+      where: { transactionId: txnId },
+      select: { userId: true, user: { select: { email: true, name: true } } },
+    });
+
+    const eligible = parties.filter((p) => p.userId !== excludeUserId);
+    if (eligible.length === 0) return;
+
+    await db.notification.createMany({
+      data: eligible.map(({ userId }) => ({
+        userId,
+        type: "TRANSACTION_REFUNDED" as const,
+        title: "Refund issued",
+        body: `A refund has been issued for "${title}".`,
+        transactionId: txnId,
+      })),
+    });
+
+    await Promise.allSettled(
+      eligible
+        .filter((p) => p.user.email)
+        .map((p) =>
+          sendEmail({
+            to: p.user.email!,
+            subject: "Refund issued",
+            html: emailTransactionRefunded(p.user.name, title, amount, txnId),
+          })
+        )
+    );
   } catch {
     // Best-effort
   }
