@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import { StatusBadge } from "@/src/features/components/StatusBadge";
 import { formatAmount, STATUS_META } from "@/lib/transaction/helpers";
 import {
   adminConfirmPayment,
   adminMarkRefunded,
+  adminInitiateDisbursement,
   adminCancelTransaction,
   adminResolveDispute,
+  adminForceApprovalOutcome,
 } from "@/app/actions/admin";
 import type { TransactionStatus } from "@prisma/client";
 
@@ -20,6 +23,7 @@ export default async function AdminTransactionDetailPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
+  const session = await getSession();
 
   const transaction = await db.transaction.findUnique({
     where: { id },
@@ -42,16 +46,23 @@ export default async function AdminTransactionDetailPage({
 
   // Which admin actions are available?
   const canConfirmPayment = status === "AWAITING_PAYMENT";
-  const canRefund: TransactionStatus[] = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "DISPUTED"];
+  const canRefund: TransactionStatus[] = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED", "DISPUTED"];
+  const canDisburse: TransactionStatus[] = ["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED", "DISPUTED"];
   const canAdminCancel: TransactionStatus[] = ["CREATED", "AWAITING_PAYMENT"];
   const canResolveDispute = status === "DISPUTED";
+  const isPendingApproval =
+    status === "PENDING_DISBURSEMENT_APPROVAL" || status === "PENDING_REFUND_APPROVAL";
+  const isSuperAdmin = session?.accountType === "SUPER_ADMIN";
 
   const confirmAction = adminConfirmPayment.bind(null, id);
   const refundAction = adminMarkRefunded.bind(null, id);
+  const disburseAction = adminInitiateDisbursement.bind(null, id);
   const cancelAction = adminCancelTransaction.bind(null, id);
   const resolveAction = adminResolveDispute.bind(null, id);
+  const forceAction = adminForceApprovalOutcome.bind(null, id);
 
   const isTerminal = ["COMPLETED", "CANCELLED", "REFUNDED"].includes(status);
+  const awaitingParty = status === "PENDING_DISBURSEMENT_APPROVAL" ? buyer : seller;
 
   return (
     <div className="max-w-2xl">
@@ -67,7 +78,10 @@ export default async function AdminTransactionDetailPage({
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 mb-4">
           {error === "wrong_status" && "Action not available at the current transaction status."}
           {error === "invalid_outcome" && "Invalid dispute resolution outcome selected."}
-          {!["wrong_status", "invalid_outcome"].includes(error) && "An error occurred."}
+          {error === "note_required" && "A note/reason is required for this action."}
+          {(error === "no_buyer" || error === "no_seller") && "This transaction is missing a required party."}
+          {!["wrong_status", "invalid_outcome", "note_required", "no_buyer", "no_seller"].includes(error) &&
+            "An error occurred."}
         </div>
       )}
 
@@ -195,8 +209,69 @@ export default async function AdminTransactionDetailPage({
         )}
       </div>
 
+      {/* Pending approval banner */}
+      {isPendingApproval && (
+        <div className="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-4">
+          <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-4">
+            Awaiting Party Approval
+          </p>
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+            <p className="text-sm font-bold text-amber-800 mb-1">
+              Waiting on {status === "PENDING_DISBURSEMENT_APPROVAL" ? "buyer" : "seller"}
+              {awaitingParty ? ` — ${awaitingParty.user.name}` : ""}
+            </p>
+            {transaction.approvalNote && (
+              <p className="text-xs text-amber-700 mb-2">Reason given: {transaction.approvalNote}</p>
+            )}
+            {transaction.approvalRequestedAt && (
+              <p className="text-xs text-amber-600">
+                Requested{" "}
+                {new Date(transaction.approvalRequestedAt).toLocaleString("en-NG", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
+            {transaction.approvalDeclineCount > 0 && (
+              <div className="mt-3 pt-3 border-t border-amber-200">
+                <p className="text-xs font-bold text-red-700">
+                  Declined {transaction.approvalDeclineCount}x — last reason:
+                </p>
+                <p className="text-xs text-red-600">{transaction.approvalDeclineNote}</p>
+              </div>
+            )}
+          </div>
+
+          {isSuperAdmin && (
+            <form action={forceAction} className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm font-bold text-red-800 mb-1">Force Outcome (Super Admin)</p>
+              <p className="text-xs text-red-600 mb-3">
+                Last resort — bypasses the pending approval and moves the transaction to its final
+                state immediately. Always logged and both parties are notified.
+              </p>
+              <textarea
+                name="note"
+                rows={2}
+                required
+                placeholder="Justification for forcing this outcome"
+                className="w-full px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-stone-700 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-red-400 mb-3 resize-none"
+              />
+              <button
+                type="submit"
+                className="bg-white hover:bg-red-50 border border-red-300 text-red-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+              >
+                Force Outcome Now
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
       {/* Admin actions panel */}
-      {!isTerminal && (
+      {!isTerminal && !isPendingApproval && (
         <div className="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-4">
           <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-4">
             Admin Actions
@@ -230,7 +305,8 @@ export default async function AdminTransactionDetailPage({
               <form action={resolveAction} className="p-4 bg-red-50 border border-red-200 rounded-xl">
                 <p className="text-sm font-bold text-red-800 mb-1">Resolve Dispute</p>
                 <p className="text-xs text-red-600 mb-3">
-                  Choose an outcome and provide a resolution note for both parties.
+                  This sends the buyer or seller an approval request — funds won&apos;t move until
+                  they respond, or a super admin forces the outcome.
                 </p>
                 <select
                   name="outcome"
@@ -257,17 +333,43 @@ export default async function AdminTransactionDetailPage({
               </form>
             )}
 
+            {/* Disburse to seller */}
+            {canDisburse.includes(status) && !canResolveDispute && (
+              <form action={disburseAction} className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <p className="text-sm font-bold text-emerald-800 mb-1">Disburse to Seller</p>
+                <p className="text-xs text-emerald-700 mb-3">
+                  This sends the buyer an approval request — funds won&apos;t move until they
+                  respond, or a super admin forces the outcome.
+                </p>
+                <textarea
+                  name="note"
+                  rows={2}
+                  required
+                  placeholder="Reason for releasing funds (shown to the buyer)"
+                  className="w-full px-3 py-2 rounded-lg border border-emerald-200 bg-white text-sm text-stone-700 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-emerald-400 mb-3 resize-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                >
+                  Disburse to Seller
+                </button>
+              </form>
+            )}
+
             {/* Refund */}
             {canRefund.includes(status) && !canResolveDispute && (
               <form action={refundAction} className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-sm font-bold text-amber-800 mb-1">Issue Refund</p>
                 <p className="text-xs text-amber-700 mb-3">
-                  Returns funds to the buyer and closes the transaction.
+                  This sends the seller an approval request — funds won&apos;t move until they
+                  respond, or a super admin forces the outcome.
                 </p>
                 <textarea
                   name="note"
                   rows={2}
-                  placeholder="Reason for refund"
+                  required
+                  placeholder="Reason for refund (shown to the seller)"
                   className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm text-stone-700 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-amber-400 mb-3 resize-none"
                 />
                 <button

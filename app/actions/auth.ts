@@ -149,7 +149,9 @@ export async function login(
 
   if (!user.emailVerified) {
     return {
-      message: "Please verify your email address before signing in. Check your inbox for the verification link.",
+      needsVerification: true,
+      verificationEmail: email,
+      message: "Please verify your email address before signing in.",
     };
   }
 
@@ -169,13 +171,16 @@ export async function login(
   redirect(destination);
 }
 
-// ─── Verify Email ─────────────────────────────────────────────────────────────
+// ─── Confirm Email Verification (POST — consumes the token) ───────────────────
+// Only called from the verify page form submit, never from a GET request.
+// This prevents email security scanners from consuming the token by pre-fetching links.
 
-export async function verifyEmail(
-  token: string
-): Promise<{ success: boolean; message: string }> {
+export async function confirmVerificationEmail(
+  token: string,
+  _formData: FormData
+): Promise<void> {
   if (!token) {
-    return { success: false, message: "Verification link is missing a token." };
+    redirect("/verify?status=invalid");
   }
 
   const user = await db.user.findFirst({
@@ -184,23 +189,65 @@ export async function verifyEmail(
   });
 
   if (!user) {
-    return { success: false, message: "This verification link is invalid or has already been used." };
+    redirect("/verify?status=invalid");
   }
 
-  if (user.emailVerified) {
-    return { success: true, message: "Your email is already verified. You can sign in." };
+  if (user!.emailVerified) {
+    redirect("/login?verified=1");
   }
 
-  if (!user.verifyTokenExp || user.verifyTokenExp < new Date()) {
-    return { success: false, message: "This verification link has expired. Please register again to get a new one." };
+  if (!user!.verifyTokenExp || user!.verifyTokenExp < new Date()) {
+    redirect("/verify?status=expired");
   }
 
   await db.user.update({
-    where: { id: user.id },
+    where: { id: user!.id },
     data: { emailVerified: true, verifyToken: null, verifyTokenExp: null },
   });
 
-  return { success: true, message: "Your email has been verified! You can now sign in." };
+  redirect("/login?verified=1");
+}
+
+// ─── Resend Verification Email ────────────────────────────────────────────────
+
+export async function resendVerificationEmail(
+  _state: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = ((formData.get("email") as string) ?? "").trim().toLowerCase();
+  if (!email) return { errors: { email: ["Email is required."] } };
+
+  const user = await db.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, emailVerified: true, channel: true },
+  });
+
+  // Always return the same message — never reveal whether an account exists
+  const genericSuccess = {
+    message: "If that email has an unverified account, a new verification link is on its way.",
+  };
+
+  if (!user || user.emailVerified || user.channel !== "WEB") {
+    return genericSuccess;
+  }
+
+  const verifyToken = randomBytes(32).toString("hex");
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      verifyToken: hashToken(verifyToken),
+      verifyTokenExp: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://vaultlify.com";
+  await sendEmail({
+    to: email,
+    subject: "Verify your Vaultlify email address",
+    html: emailVerifyAccount(user.name, `${base}/verify?token=${verifyToken}`),
+  });
+
+  return genericSuccess;
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

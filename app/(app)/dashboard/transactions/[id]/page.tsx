@@ -15,8 +15,13 @@ import {
   markAsDelivered,
   confirmReceipt,
 } from "@/app/actions/transaction";
+import {
+  respondToDisbursementApproval,
+  respondToRefundApproval,
+} from "@/app/actions/approval";
 import CopyButton from "./CopyButton";
 import DisputeForm from "./DisputeForm";
+import RequestPayoutButton from "./RequestPayoutButton";
 
 export default async function TransactionDetailPage({
   params,
@@ -55,10 +60,20 @@ export default async function TransactionDetailPage({
   const canCancel = ["CREATED", "AWAITING_PAYMENT"].includes(status);
   const canMarkDelivered = myRole === "SELLER" && ["FUNDED", "IN_PROGRESS"].includes(status);
   const canConfirmReceipt = myRole === "BUYER" && ["DELIVERED", "UNDER_INSPECTION"].includes(status);
+  const canApproveDisbursement = myRole === "BUYER" && status === "PENDING_DISBURSEMENT_APPROVAL";
+  const canApproveRefund = myRole === "SELLER" && status === "PENDING_REFUND_APPROVAL";
+  const canRequestPayout = myRole === "BUYER" && status === "RECEIPT_CONFIRMED";
+  // The other party is being asked, but it's not me — show a read-only note
+  const waitingOnCounterparty =
+    (status === "PENDING_DISBURSEMENT_APPROVAL" && myRole === "SELLER") ||
+    (status === "PENDING_REFUND_APPROVAL" && myRole === "BUYER");
+  const awaitingBuyerPayout = myRole === "SELLER" && status === "RECEIPT_CONFIRMED";
 
   const cancelAction = cancelTransaction.bind(null, id);
   const deliverAction = markAsDelivered.bind(null, id);
   const confirmAction = confirmReceipt.bind(null, id);
+  const approveDisbursementAction = respondToDisbursementApproval.bind(null, id);
+  const approveRefundAction = respondToRefundApproval.bind(null, id);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -202,14 +217,20 @@ export default async function TransactionDetailPage({
               </form>
             )}
             {canConfirmReceipt && (
-              <form action={confirmAction}>
-                <button
-                  type="submit"
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
-                >
-                  ✅ Confirm Receipt
-                </button>
-              </form>
+              <div>
+                <form action={confirmAction}>
+                  <button
+                    type="submit"
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+                  >
+                    ✅ Confirm Receipt
+                  </button>
+                </form>
+                <p className="text-xs text-stone-400 mt-1.5 max-w-xs">
+                  This only confirms you received the item — it doesn&apos;t release payment. You&apos;ll
+                  separately request payout afterward.
+                </p>
+              </div>
             )}
             {canCancel && (
               <form action={cancelAction}>
@@ -225,8 +246,87 @@ export default async function TransactionDetailPage({
         </div>
       )}
 
+      {/* Approve/decline a pending disbursement or refund */}
+      {(canApproveDisbursement || canApproveRefund) && (
+        <div className="bg-white rounded-2xl border border-amber-200 px-6 py-5 mb-4">
+          <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-2">
+            Your Approval Is Needed
+          </p>
+          <p className="text-sm text-stone-600 mb-1">
+            {canApproveDisbursement
+              ? "Vaultlify wants to release the escrowed funds to the seller."
+              : "Vaultlify wants to refund the escrowed funds to you."}
+          </p>
+          {transaction.approvalNote && (
+            <p className="text-xs text-stone-400 mb-4">Reason: {transaction.approvalNote}</p>
+          )}
+          <div className="flex flex-wrap items-start gap-3">
+            <form action={canApproveDisbursement ? approveDisbursementAction : approveRefundAction}>
+              <input type="hidden" name="decision" value="APPROVE" />
+              <button
+                type="submit"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98]"
+              >
+                ✅ Approve
+              </button>
+            </form>
+            <form
+              action={canApproveDisbursement ? approveDisbursementAction : approveRefundAction}
+              className="flex flex-col gap-2"
+            >
+              <input type="hidden" name="decision" value="DECLINE" />
+              <textarea
+                name="note"
+                rows={1}
+                required
+                placeholder="Reason for declining"
+                className="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-stone-700 placeholder:text-stone-400 outline-none focus:ring-2 focus:ring-red-400 resize-none"
+              />
+              <button
+                type="submit"
+                className="bg-white hover:bg-red-50 border border-red-200 text-red-600 font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-[0.98] self-start"
+              >
+                Decline
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Request payout to seller — after buyer has confirmed receipt */}
+      {canRequestPayout && (
+        <div className="bg-white rounded-2xl border border-emerald-200 px-6 py-5 mb-4">
+          <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-2">
+            Ready to Release Payment?
+          </p>
+          <p className="text-sm text-stone-600 mb-3">
+            You&apos;ve confirmed receipt. When you&apos;re ready, request payout to release the
+            escrowed funds to {counterpartyParty?.user.name ?? "the seller"}.
+          </p>
+          <RequestPayoutButton
+            txnId={id}
+            amount={formatAmount(transaction.amount)}
+            sellerName={counterpartyParty?.user.name ?? "the seller"}
+          />
+        </div>
+      )}
+
+      {/* Read-only note when the counterparty is the one being asked */}
+      {(waitingOnCounterparty || awaitingBuyerPayout) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 mb-4">
+          <p className="text-sm text-amber-700">
+            {status === "PENDING_DISBURSEMENT_APPROVAL" &&
+              "Waiting on the buyer to approve releasing funds to you."}
+            {status === "PENDING_REFUND_APPROVAL" &&
+              "Waiting on the seller to approve refunding the buyer."}
+            {status === "RECEIPT_CONFIRMED" &&
+              "Buyer confirmed receipt — waiting for them to request payout."}
+          </p>
+        </div>
+      )}
+
       {/* Raise dispute */}
-      {["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"].includes(status) && (
+      {["FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION", "RECEIPT_CONFIRMED"].includes(status) && (
         <div className="bg-white rounded-2xl border border-stone-200 px-6 py-5 mb-4">
           <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-1">
             Problem with this transaction?

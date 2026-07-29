@@ -315,7 +315,8 @@ export default async function WidgetPage({
           <div className="bg-white rounded-2xl border border-stone-200 px-5 py-5">
             <p className="text-sm font-bold text-stone-800 mb-1">Received your item?</p>
             <p className="text-stone-500 text-xs mb-3">
-              Confirm receipt to release payment to the seller.
+              Confirm receipt once you&apos;ve received it. You&apos;ll separately request payout
+              afterward.
             </p>
             <form action={confirmAction}>
               <button
@@ -327,6 +328,24 @@ export default async function WidgetPage({
             </form>
           </div>
         )}
+
+      {/* ── Buyer: confirmed receipt, finish on dashboard ── */}
+      {myParty?.role === "BUYER" && transaction.status === "RECEIPT_CONFIRMED" && (
+        <div className="bg-white rounded-2xl border border-stone-200 px-5 py-5">
+          <p className="text-sm font-bold text-stone-800 mb-1">Receipt confirmed ✅</p>
+          <p className="text-stone-500 text-xs mb-3">
+            Finish releasing payment to the seller from your Vaultlify dashboard.
+          </p>
+          <a
+            href={`/dashboard/transactions/${txnId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center w-full bg-emerald-700 hover:bg-emerald-800 active:scale-[0.98] text-white font-bold py-3 rounded-xl transition-all text-sm"
+          >
+            Go to Dashboard →
+          </a>
+        </div>
+      )}
 
       {/* ── Terminal states ── */}
       {transaction.status === "COMPLETED" && (

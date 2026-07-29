@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StatusBadge } from "@/src/features/components/StatusBadge";
@@ -6,26 +7,30 @@ import { formatAmount } from "@/lib/transaction/helpers";
 
 export default async function DashboardPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
 
   const [active, completed, disputed, recent] = await Promise.all([
     db.transactionParty.count({
       where: {
-        userId: session!.userId,
+        userId: session.userId,
         transaction: {
           status: {
-            in: ["CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION"],
+            in: [
+              "CREATED", "AWAITING_PAYMENT", "FUNDED", "IN_PROGRESS", "DELIVERED", "UNDER_INSPECTION",
+              "RECEIPT_CONFIRMED", "PENDING_DISBURSEMENT_APPROVAL", "PENDING_REFUND_APPROVAL",
+            ],
           },
         },
       },
     }),
     db.transactionParty.count({
-      where: { userId: session!.userId, transaction: { status: "COMPLETED" } },
+      where: { userId: session.userId, transaction: { status: "COMPLETED" } },
     }),
     db.transactionParty.count({
-      where: { userId: session!.userId, transaction: { status: "DISPUTED" } },
+      where: { userId: session.userId, transaction: { status: "DISPUTED" } },
     }),
     db.transactionParty.findMany({
-      where: { userId: session!.userId },
+      where: { userId: session.userId },
       include: { transaction: true },
       orderBy: { createdAt: "desc" },
       take: 5,
